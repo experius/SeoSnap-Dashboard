@@ -1,0 +1,35 @@
+version: '3.7'
+services:
+  db:
+    image: mysql
+    environment:
+      MYSQL_ROOT_HOST: ${DB_ROOT_HOST}
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./dev/instance/mariadb:/var/lib/mysql
+    networks:
+      - seosnap_dashboard
+
+  pma:
+    image: phpmyadmin/phpmyadmin
+    depends_on:
+      - db
+    environment:
+      PMA_HOST: db
+      PMA_USER: ${DB_USER}
+      PMA_PASSWORD: ${DB_PASS}
+    ports:
+      - "8081:80"
+    volumes:
+      - ./dev/instance/mariadb:/var/lib/mysql
+    networks:
+      - seosnap_dashboard
+
+networks:
+  seosnap_dashboard:
+    driver: bridge

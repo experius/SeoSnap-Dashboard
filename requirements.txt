@@ -1,0 +1,4 @@
+Django
+python-dotenv
+mysqlclient
+django-mysql
