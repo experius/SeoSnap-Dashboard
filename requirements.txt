@@ -1,5 +1,8 @@
-Django
-python-dotenv
-mysqlclient
-django-mysql
-djangorestframework
+Django==3.0.2
+python-dotenv==0.10.3
+mysqlclient==1.4.6
+django-mysql==3.3.0
+djangorestframework==3.11.0
+coreapi==2.3.3
+Pygments==2.4.2
+Markdown==3.1.1

@@ -16,7 +16,7 @@ class Website(Model):
 
 
 class ExtractField(Model):
-    website = models.ForeignKey(Website, on_delete=models.CASCADE)
+    website = models.ForeignKey(Website, related_name='extract_fields', on_delete=models.CASCADE)
 
     name = models.CharField(max_length=255)
     css_selector = models.CharField(max_length=255)
@@ -30,7 +30,7 @@ class ExtractField(Model):
 
 
 class Page(Model):
-    website = models.ForeignKey(Website, on_delete=models.CASCADE)
+    website = models.ForeignKey(Website, related_name='pages', on_delete=models.CASCADE)
 
     address = models.CharField(max_length=255)
     content_type = models.CharField(max_length=255, null=True, default=None)
