@@ -1,0 +1,10 @@
+{% extends 'admin/change_form.html' %}
+{% load i18n admin_urls %}
+
+{% block object-tools-items %}
+{{ block.super }}
+<li>
+    {% url opts|admin_urlname:'websitepages' original.pk|admin_urlquote as pages_url %}
+    <a href="{% add_preserved_filters pages_url %}" class="pageslink">{% trans "Pages" %}</a>
+</li>
+{% endblock %}
