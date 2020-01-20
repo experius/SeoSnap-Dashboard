@@ -9,17 +9,17 @@ class ExtractFieldSerializer(serializers.ModelSerializer):
         fields = ('website', 'name', 'css_selector', 'created_at', 'updated_at')
 
 
-class WebsiteSerializer(serializers.ModelSerializer):
-    extract_fields = ExtractFieldSerializer(many=True, read_only=True)
-    pages = ExtractFieldSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = Website
-        fields = ('name', 'domain', 'created_at', 'updated_at', 'extract_fields', 'pages')
-
-
 class PageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Page
-        fields = ('website', 'address', 'content_type', 'status_code', 'cache_status', 'cached_at', 'created_at', 'updated_at')
+        fields = ('website', 'address', 'content_type', 'status_code', 'cache_status', 'cached_at', 'created_at', 'updated_at', 'extract_fields')
         read_only_fields = ('website', 'created_at', 'updated_at')
+
+
+class WebsiteSerializer(serializers.ModelSerializer):
+    extract_fields = ExtractFieldSerializer(many=True, read_only=True)
+    #pages = PageSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Website
+        fields = ('name', 'domain', 'sitemap', 'created_at', 'updated_at', 'extract_fields')

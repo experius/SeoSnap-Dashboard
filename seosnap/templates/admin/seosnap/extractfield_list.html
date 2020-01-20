@@ -1,0 +1,12 @@
+{% load i18n %}
+
+
+<fieldset class="module aligned extracted-fields">
+     <h2>{% trans "Extracted Fields" %}</h2>
+    {% for field,value in fields %}
+    <div class="form-row">
+        <label>{% trans field %}:</label>
+        <div class="readonly">{{ value }}</div>
+    </div>
+     {% endfor %}
+</fieldset>

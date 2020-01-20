@@ -1,40 +1,12 @@
-import coreapi
-import coreschema
-from rest_framework import versioning, viewsets, generics, mixins
-from rest_framework.decorators import action
+import coreapi, coreschema
+from django.db import transaction
+from rest_framework import viewsets, decorators
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.renderers import CoreJSONRenderer
-from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.schemas import ManualSchema, get_schema_view, DefaultSchema
-from rest_framework.views import APIView
+from rest_framework.schemas import AutoSchema
 
-from seosnap.models import Website, Page
-from seosnap.serializers import WebsiteSerializer, PageSerializer
-from rest_framework.schemas import AutoSchema, ManualSchema
-
-custom_schema = ManualSchema(
-    fields=[
-        coreapi.Field(
-            "id",
-            required=True,
-            location="path",
-            schema=coreschema.String(
-                title="ID",
-                description="Foobar ID.",
-            )
-        ),
-        coreapi.Field(
-            "foobar",
-            location="query",
-            schema=coreschema.String(
-                title="Foobar",
-                description="Foobar?",
-            )
-        ),
-    ],
-    description="Foobar!",
-)
+from seosnap.models import Page, Website
+from seosnap.serializers import PageSerializer, WebsiteSerializer
 
 
 class WebsiteViewSet(viewsets.ModelViewSet):
@@ -43,7 +15,7 @@ class WebsiteViewSet(viewsets.ModelViewSet):
 
 
 class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
-    @action(detail=True, methods=['get'])
+    @decorators.action(detail=True, methods=['get'])
     def pages(self, request, version, website_id=None):
         queryset = Website.objects.get(id=website_id).pages.all()
 
@@ -63,9 +35,7 @@ class PageWebsiteUpdate(viewsets.ViewSet):
             location="body",
             schema=coreschema.Array(
                 items=coreschema.Object(
-                    properties={
-                        'aa': coreschema.Boolean()
-                    },
+                    properties={},
                     title="Page",
                     description="Page",
                 )
@@ -73,20 +43,25 @@ class PageWebsiteUpdate(viewsets.ViewSet):
         ),
     ])
 
-    @action(detail=True, methods=['put'], schema=custom_schema)
+    @decorators.action(detail=True, methods=['put'])
     def update_pages(self, request, version, website_id=None):
         items = request.data if isinstance(request.data, list) else []
         addresses = [item['address'] for item in items if 'address' in item]
 
-        existing = {item.address: item for item in Page.objects.filter(address__in=addresses)}
+        existing = {page.address: page for page in Page.objects.filter(address__in=addresses, website_id=website_id)}
         allowed_fields = set(PageSerializer.Meta.fields) - set(PageSerializer.Meta.read_only_fields)
         for item in items:
             item = {k: item[k] for k in allowed_fields if k in item}
-            test = Page(item)
-            aa = 0
+            if item['address'] in existing:
+                page = existing[item['address']]
+                for k, v in item.items(): setattr(page, k, v)
+            else:
+                existing[item['address']] = Page(**item)
 
-        model = Website.objects.get(id=website_id).pages
+        with transaction.atomic():
+            for page in existing.values():
+                page.website_id = website_id
+                page.save()
 
-        queryset = self.get_object().pages.all()
-        serializer = PageSerializer(queryset, many=True)
+        serializer = PageSerializer(list(existing.values()), many=True)
         return Response(serializer.data)

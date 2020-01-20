@@ -18,6 +18,9 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from rest_framework.documentation import include_docs_urls
 
+admin.site.site_header = "SeoSnap"
+admin.site.site_title = "SeoSnap Dashboard"
+admin.site.index_title = "Welcome to SeoSnap Dashboard"
 
 urlpatterns = [
     path('', admin.site.urls),

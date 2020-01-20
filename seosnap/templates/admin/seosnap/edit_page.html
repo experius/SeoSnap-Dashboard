@@ -1,5 +1,5 @@
 {% extends 'admin/change_form.html' %}
-{% load i18n admin_urls %}
+{% load i18n admin_urls seosnap_list %}
 
 {% if not is_popup %}
 {% block breadcrumbs %}
@@ -13,3 +13,7 @@
 </div>
 {% endblock %}
 {% endif %}
+
+{% block after_field_sets %}
+{% extractfield_list original original.website %}
+{% endblock %}

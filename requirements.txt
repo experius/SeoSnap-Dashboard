@@ -1,3 +1,4 @@
+coreschema==0.0.4
 Django==3.0.2
 python-dotenv==0.10.3
 mysqlclient==1.4.6
@@ -6,3 +7,4 @@ djangorestframework==3.11.0
 coreapi==2.3.3
 Pygments==2.4.2
 Markdown==3.1.1
+git+https://github.com/django-guardian/django-guardian.git@devel
