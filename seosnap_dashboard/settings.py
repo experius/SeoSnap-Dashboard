@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-load_dotenv(dotenv_path=os.path.join(BASE_DIR, '.env'))
+load_dotenv(dotenv_path=os.path.join(BASE_DIR, '.env'), override=False)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
@@ -26,7 +26,7 @@ DEBUG = bool(os.getenv('ADMIN_DEBUG'))
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 INSTALLED_APPS = [
@@ -87,6 +87,24 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.URLPathVersioning',
     'PAGE_SIZE': 10
+}
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file_log': {
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs/dashboard.log'),
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file_log'],
+            'level': os.getenv('ADMIN_LOG_LEVEL', 'INFO'),
+            'propagate': True,
+        },
+    },
 }
 
 # Password validation
