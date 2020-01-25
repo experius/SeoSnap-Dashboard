@@ -4,6 +4,7 @@
 /.env
 !/.env.example
 /.idea
+/logs
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template
