@@ -1,17 +1,32 @@
 from django.contrib import admin
+from django.forms import BaseInlineFormSet
 from django.utils.html import format_html
+from django_mysql.models import QuerySet
 from guardian.admin import GuardedModelAdmin
 
-from .models import Website, Page, ExtractField
+from .models import Website, Page, ExtractField, website_add_permission_filter
+
+
+class ExtractFieldInlineFormset(BaseInlineFormSet):
+    def __init__(self, *args, **kwargs):
+        instance = kwargs.get('instance', None)
+        if instance.id is None:
+            kwargs['initial'] = [{
+                'name': 'title',
+                'css_selector': 'title',
+                'display': True,
+            }]
+        super().__init__(*args, **kwargs)
 
 
 class ExtractFieldInline(admin.TabularInline):
     model = ExtractField
+    formset = ExtractFieldInlineFormset
 
 
 @admin.register(ExtractField)
 class ExtractFieldAdmin(admin.ModelAdmin):
-    list_display = ('website', 'name', 'css_selector', 'created_at', 'updated_at')
+    list_display = ('website', 'name', 'css_selector', 'display', 'created_at', 'updated_at')
 
     def has_module_permission(self, request):
         return False
@@ -22,7 +37,7 @@ class PageAdmin(admin.ModelAdmin):
     list_display = ('address_link', 'content_type', 'status_code', 'cache_status', 'cached_at', 'created_at',
                     'updated_at')
 
-    readonly_fields = ('content_type', 'status_code', 'extract_fields', 'cache_status',
+    readonly_fields = ('website', 'address', 'content_type', 'status_code', 'extract_fields', 'cache_status',
                        'cached_at', 'created_at', 'updated_at')
 
     search_fields = ('address', 'content_type', 'status_code', 'extract_fields', 'cached_at')
@@ -55,6 +70,18 @@ class PageAdmin(admin.ModelAdmin):
         response = self.changeform_view(request, object_id, form_url, {})
         return response
 
+    def has_change_permission(self, request, obj=None):
+        if self.website is None: return False
+        return request.user.has_perm('seosnap.change_website', self.website)
+
+    def has_view_permission(self, request, obj=None):
+        if self.website is None: return False
+        return request.user.has_perm('seosnap.view_website', self.website)
+
+    def has_delete_permission(self, request, obj=None):
+        if self.website is None: return False
+        return request.user.has_perm('seosnap.change_website', self.website)
+
     def get_queryset(self, request):
         return super().get_queryset(request).filter(website=self.website.id)
 
@@ -81,6 +108,15 @@ class WebsiteAdmin(GuardedModelAdmin):
                  name='%s_%s_websitepages' % info),
         ]
         return new_urls + urls
+
+    def get_queryset(self, request):
+        qs: QuerySet = super().get_queryset(request)
+
+        if request.user.is_superuser:
+            return qs
+
+        qs = website_add_permission_filter(qs, 'view_website', request.user)
+        return qs
 
     def pages_view(self, request, object_id=None):
         site: admin.AdminSite = self.admin_site
