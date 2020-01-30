@@ -65,9 +65,13 @@ class PageWebsiteUpdate(viewsets.ViewSet):
                 existing[item['address']] = Page(**item)
 
         with transaction.atomic():
+            cache_updated_at = website.cache_updated_at
             for page in existing.values():
                 page.website_id = website_id
+                cache_updated_at = page.cached_at
                 page.save()
+            website.cache_updated_at = cache_updated_at
+            website.save()
 
         serializer = PageSerializer(list(existing.values()), many=True)
         return Response(serializer.data)

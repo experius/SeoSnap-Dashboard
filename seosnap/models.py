@@ -12,6 +12,7 @@ class Website(Model):
     domain = models.CharField(max_length=255)
     sitemap = models.CharField(max_length=255, null=True, default=None)
 
+    cache_updated_at = models.DateTimeField(null=True, default=None)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -23,6 +24,10 @@ class Website(Model):
 
     def get_display_extract_fields(self):
         return [field for field in self.extract_fields.filter(display=True).values_list('name', flat=True)]
+
+    def get_url(self, path):
+        if isinstance(path, Page): path = path.address
+        return self.domain.rstrip('/') + path
 
 
 def website_add_permission_filter(qs, permission, user: AbstractUser):

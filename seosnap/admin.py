@@ -1,3 +1,5 @@
+import os
+
 from django.contrib import admin
 from django.forms import BaseInlineFormSet
 from django.utils.html import format_html
@@ -34,11 +36,13 @@ class ExtractFieldAdmin(admin.ModelAdmin):
 
 @admin.register(Page)
 class PageAdmin(admin.ModelAdmin):
-    list_display = ('address_link', 'content_type', 'status_code', 'cache_status', 'cached_at', 'created_at',
-                    'updated_at')
+    list_display = (
+        'address_link', 'address_full', 'content_type', 'status_code', 'cache_status', 'cached_at', 'created_at',
+        'updated_at')
 
-    readonly_fields = ('website', 'address', 'content_type', 'status_code', 'extract_fields', 'cache_status',
-                       'cached_at', 'created_at', 'updated_at')
+    readonly_fields = (
+        'website', 'address', 'address_full', 'content_type', 'status_code', 'extract_fields', 'cache_status',
+        'cached_at', 'created_at', 'updated_at')
 
     search_fields = ('address', 'content_type', 'status_code', 'extract_fields', 'cached_at')
 
@@ -46,9 +50,14 @@ class PageAdmin(admin.ModelAdmin):
     change_list_template = 'admin/seosnap/view_pages.html'
     change_form_template = 'admin/seosnap/edit_page.html'
 
-    def address_link(self, obj):
-        url = f'/seosnap/website/{self.website.id}/pages/{obj.id}/change'
-        return format_html('<a href="{}">{}</a>', url, obj.address)
+    list_filter = ('status_code', 'content_type', 'cache_status')
+
+    def address_link(self, page):
+        url = f'/seosnap/website/{self.website.id}/pages/{page.id}/change'
+        return format_html('<a href="{}">{}</a>', url, page.address)
+
+    def address_full(self, page):
+        return format_html('<a href="{}" target="_blank">Open page</a>', self.website.get_url(page))
 
     def has_add_permission(self, request):
         return False
@@ -65,9 +74,15 @@ class PageAdmin(admin.ModelAdmin):
         response = self.changelist_view(request, extra_context)
         return response
 
-    def websitepage_view(self, request, website_id=None, object_id=None, form_url=''):
+    def websitepage_view(self, request, website_id=None, page_id=None, form_url=''):
         self.website = Website.objects.get(id=website_id)
-        response = self.changeform_view(request, object_id, form_url, {})
+        page = self.get_object(request, page_id)
+
+        cacheserver_root = os.getenv('EXTERNAL_CACHE_SERVER_URL').rstrip('/')
+        if len(cacheserver_root) == 0:
+            cacheserver_root = f'http://{request.get_host().replace("8080", "5000")}/render'
+        refresh_url = cacheserver_root + '/' + self.website.get_url(page)
+        response = self.changeform_view(request, page_id, form_url, {"refresh_url": refresh_url})
         return response
 
     def has_change_permission(self, request, obj=None):
@@ -88,7 +103,7 @@ class PageAdmin(admin.ModelAdmin):
 
 @admin.register(Website)
 class WebsiteAdmin(GuardedModelAdmin):
-    list_display = ('name', 'domain', 'sitemap', 'created_at', 'updated_at')
+    list_display = ('name', 'domain', 'sitemap', 'created_at', 'updated_at', 'cache_updated_at')
     list_display_links = ('name', 'domain')
     change_form_template = 'admin/seosnap/edit_website.html'
 
@@ -112,8 +127,7 @@ class WebsiteAdmin(GuardedModelAdmin):
     def get_queryset(self, request):
         qs: QuerySet = super().get_queryset(request)
 
-        if request.user.is_superuser:
-            return qs
+        if request.user.is_superuser: return qs
 
         qs = website_add_permission_filter(qs, 'view_website', request.user)
         return qs
