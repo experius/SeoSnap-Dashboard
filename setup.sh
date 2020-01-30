@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # Load env vars
 if [ -z ${var+x} ]; then
   # shellcheck disable=SC2046
