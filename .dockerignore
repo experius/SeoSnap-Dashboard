@@ -1,1 +1,5 @@
-/dev/instance
+./dev/instance
+Dockerfile
+docker-compose.yml
+README.md
+.git/
