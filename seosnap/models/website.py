@@ -31,20 +31,3 @@ class Website(Model):
         uri = urlparse(self.domain)
         root_domain = f'{uri.scheme}://{uri.netloc}'
         return root_domain + path
-
-
-def website_add_permission_filter(qs, permission, user: AbstractUser):
-    if user.is_superuser: return qs
-
-    select_permission = 'SELECT id FROM auth_permission aug WHERE aug.codename = %s'
-    select_groups = 'SELECT id FROM auth_user_groups aug WHERE aug.user_id = %s'
-    qs: QuerySet = qs.filter(id__in=RawSQL(f'''
-        SELECT guop.object_pk FROM guardian_userobjectpermission guop
-        JOIN django_content_type dct ON dct.id = guop.content_type_id AND model = 'website'
-        WHERE guop.permission_id IN ({select_permission}) AND guop.user_id = %s
-        UNION
-        SELECT ggop.object_pk FROM guardian_groupobjectpermission ggop
-        JOIN django_content_type dct ON dct.id = ggop.content_type_id AND model = 'website'
-        WHERE ggop.permission_id IN ({select_permission}) AND ggop.group_id in ({select_groups})
-    ''', (permission, user.id, permission, user.id)))
-    return qs

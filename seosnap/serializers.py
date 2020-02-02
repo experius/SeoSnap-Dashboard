@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from seosnap.models import Website, ExtractField, Page
+from seosnap.models import Website, ExtractField, Page, QueueItem
 
 
 class ExtractFieldSerializer(serializers.ModelSerializer):
@@ -12,14 +12,33 @@ class ExtractFieldSerializer(serializers.ModelSerializer):
 class PageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Page
-        fields = ('website', 'address', 'content_type', 'status_code', 'cache_status', 'cached_at', 'created_at', 'updated_at', 'extract_fields')
+        fields = (
+        'website', 'address', 'content_type', 'status_code', 'cache_status', 'cached_at', 'created_at', 'updated_at',
+        'extract_fields')
         read_only_fields = ('website', 'created_at', 'updated_at')
 
 
 class WebsiteSerializer(serializers.ModelSerializer):
     extract_fields = ExtractFieldSerializer(many=True, read_only=True)
-    #pages = PageSerializer(many=True, read_only=True)
+
+    # pages = PageSerializer(many=True, read_only=True)
 
     class Meta:
         model = Website
         fields = ('name', 'domain', 'sitemap', 'created_at', 'updated_at', 'extract_fields')
+
+
+class LightPageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Page
+        fields = ('address',)
+        read_only_fields = ('address',)
+
+
+class QueueItemSerializer(serializers.ModelSerializer):
+    page = LightPageSerializer(read_only=True)
+
+    class Meta:
+        model = QueueItem
+        fields = ('page', 'status')
+        read_only_fields = ('page', 'priority')

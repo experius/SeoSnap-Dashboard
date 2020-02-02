@@ -5,20 +5,16 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.schemas import AutoSchema
 
-from seosnap.models import Page, Website, website_add_permission_filter
-from seosnap.serializers import PageSerializer, WebsiteSerializer
-
-
-class WebsiteViewSet(viewsets.ModelViewSet):
-    queryset = Website.objects.all()
-    serializer_class = WebsiteSerializer
+from seosnap.models import Page, Website
+from seosnap.serializers import PageSerializer
 
 
 class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
     @decorators.action(detail=True, methods=['get'])
     def pages(self, request, version, website_id=None):
-        website = website_add_permission_filter(Website.objects.filter(id=website_id), 'change_website', request.user).first()
-        if website is None: return Response([])
+        website = Website.objects.filter(id=website_id).first()
+        allowed = request.user.has_perm('seosnap.view_website', website)
+        if not allowed or not website: return Response([])
 
         queryset = website.pages.all()
 
@@ -48,8 +44,9 @@ class PageWebsiteUpdate(viewsets.ViewSet):
 
     @decorators.action(detail=True, methods=['put'])
     def update_pages(self, request, version, website_id=None):
-        website = website_add_permission_filter(Website.objects.filter(id=website_id), 'change_website', request.user).first()
-        if website is None: return Response([])
+        website = Website.objects.filter(id=website_id).first()
+        allowed = request.user.has_perm('seosnap.view_website', website)
+        if not allowed or not website: return Response([])
 
         items = request.data if isinstance(request.data, list) else []
         addresses = [item['address'] for item in items if 'address' in item]
@@ -75,4 +72,3 @@ class PageWebsiteUpdate(viewsets.ViewSet):
 
         serializer = PageSerializer(list(existing.values()), many=True)
         return Response(serializer.data)
-
