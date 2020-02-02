@@ -6,5 +6,8 @@
 <li>
     {% url opts|admin_urlname:'websitepages' original.pk|admin_urlquote as pages_url %}
     <a href="{% add_preserved_filters pages_url %}" class="pageslink">{% trans "Pages" %}</a>
+
+    {% url opts|admin_urlname:'websitequeue' original.pk|admin_urlquote as queue_url %}
+    <a href="{% add_preserved_filters queue_url %}" class="queuelink">{% trans "Queue" %}</a>
 </li>
 {% endblock %}
