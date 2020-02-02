@@ -1,37 +1,9 @@
 import os
 
 from django.contrib import admin
-from django.forms import BaseInlineFormSet
 from django.utils.html import format_html
-from django_mysql.models import QuerySet
-from guardian.admin import GuardedModelAdmin
 
-from .models import Website, Page, ExtractField, website_add_permission_filter
-
-
-class ExtractFieldInlineFormset(BaseInlineFormSet):
-    def __init__(self, *args, **kwargs):
-        instance = kwargs.get('instance', None)
-        if instance.id is None:
-            kwargs['initial'] = [{
-                'name': 'title',
-                'css_selector': 'title',
-                'display': True,
-            }]
-        super().__init__(*args, **kwargs)
-
-
-class ExtractFieldInline(admin.TabularInline):
-    model = ExtractField
-    formset = ExtractFieldInlineFormset
-
-
-@admin.register(ExtractField)
-class ExtractFieldAdmin(admin.ModelAdmin):
-    list_display = ('website', 'name', 'css_selector', 'display', 'created_at', 'updated_at')
-
-    def has_module_permission(self, request):
-        return False
+from seosnap.models import Page, Website
 
 
 @admin.register(Page)
@@ -99,50 +71,3 @@ class PageAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).filter(website=self.website.id)
-
-
-@admin.register(Website)
-class WebsiteAdmin(GuardedModelAdmin):
-    list_display = ('name', 'domain', 'sitemap', 'created_at', 'updated_at', 'cache_updated_at')
-    list_display_links = ('name', 'domain')
-    change_form_template = 'admin/seosnap/edit_website.html'
-
-    inlines = [
-        ExtractFieldInline
-    ]
-
-    def get_urls(self):
-        from django.urls import path
-
-        info = self.model._meta.app_label, self.model._meta.model_name
-        urls = super().get_urls()
-        new_urls = [
-            path('<path:object_id>/pages/', self.admin_site.admin_view(self.pages_view),
-                 name='%s_%s_websitepages' % info),
-            path('<path:website_id>/pages/<path:object_id>/change', self.admin_site.admin_view(self.page_view),
-                 name='%s_%s_websitepages' % info),
-        ]
-        return new_urls + urls
-
-    def get_queryset(self, request):
-        qs: QuerySet = super().get_queryset(request)
-
-        if request.user.is_superuser: return qs
-
-        qs = website_add_permission_filter(qs, 'view_website', request.user)
-        return qs
-
-    def pages_view(self, request, object_id=None):
-        site: admin.AdminSite = self.admin_site
-        model: PageAdmin = site._registry[Page]
-        response = model.websitepages_view(request, object_id)
-
-        filtered_query_set = response.context_data["cl"].queryset.filter(website=2)
-        response.context_data["cl"].queryset = filtered_query_set
-        return response
-
-    def page_view(self, request, website_id=None, object_id=None):
-        site: admin.AdminSite = self.admin_site
-        model: PageAdmin = site._registry[Page]
-        response = model.websitepage_view(request, website_id, object_id, '')
-        return response
