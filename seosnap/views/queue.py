@@ -17,14 +17,16 @@ class QueueWebsiteList(viewsets.ViewSet, PageNumberPagination):
         allowed = request.user.has_perm('seosnap.view_website', website)
         if not allowed or not website: return Response([])
 
-        queryset = website.queue_items.filter(status='unscheduled').order_by('-priority', '-created_at').all()
+        data = website.queue_items.filter(status='unscheduled')\
+            .order_by('-priority', '-created_at')\
+            .all()[:50]
 
-        queue = self.paginate_queryset(queryset, request)
-        if queue is not None:
-            serializer = QueueItemSerializer(queue, many=True)
-            return self.get_paginated_response(serializer.data)
+        with transaction.atomic():
+            for item in data:
+                item.status = 'scheduled'
+                item.save()
 
-        serializer = QueueItemSerializer(queryset, many=True)
+        serializer = QueueItemSerializer(data, many=True)
         return Response(serializer.data)
 
 

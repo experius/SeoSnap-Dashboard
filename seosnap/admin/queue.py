@@ -13,6 +13,8 @@ class QueueAdmin(WebsiteBaseAdmin):
 
     list_per_page = 50
 
+    ordering = ('-updated_at',)
+
     change_list_template = 'admin/seosnap/view_queue.html'
     change_form_template = 'admin/seosnap/edit_queue.html'
 

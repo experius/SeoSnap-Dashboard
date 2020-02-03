@@ -1,10 +1,24 @@
 import os
 
 from django.contrib import admin
+from django.db import transaction
+from django.shortcuts import redirect
 from django.utils.html import format_html
+from rest_framework.reverse import reverse
 
 from seosnap.admin import WebsiteBaseAdmin
-from seosnap.models import Page, Website
+from seosnap.models import Page, QueueItem
+
+
+def enqueue(admin_model, request, queryset):
+    page_ids = queryset.values_list('id', flat=True)
+
+    with transaction.atomic():
+        for page_id in page_ids:
+            item = QueueItem(page_id=page_id, website_id=admin_model.website.id, priority=10000)
+            item.save()
+
+    return redirect(reverse('admin:seosnap_website_websitequeue', args=(admin_model.website.id,)))
 
 
 @admin.register(Page)
@@ -23,8 +37,12 @@ class PageAdmin(WebsiteBaseAdmin):
 
     list_per_page = 50
 
+    ordering = ('-cached_at',)
+
     change_list_template = 'admin/seosnap/view_pages.html'
     change_form_template = 'admin/seosnap/edit_page.html'
+
+    actions = [enqueue]
 
     def address_link(self, page):
         url = f'/seosnap/website/{self.website.id}/pages/{page.id}/change'
