@@ -17,9 +17,9 @@ class QueueWebsiteList(viewsets.ViewSet, PageNumberPagination):
         allowed = request.user.has_perm('seosnap.view_website', website)
         if not allowed or not website: return Response([])
 
-        data = website.queue_items.filter(status='unscheduled')\
-            .order_by('-priority', '-created_at')\
-            .all()[:50]
+        data = website.queue_items.filter(status='unscheduled') \
+                   .order_by('-priority', '-created_at') \
+                   .all()[:50]
 
         with transaction.atomic():
             for item in data:
@@ -71,3 +71,15 @@ class QueueWebsiteUpdate(viewsets.ViewSet):
 
         serializer = QueueItemSerializer(list(existing.values()), many=True)
         return Response(serializer.data)
+
+
+class QueueWebsiteClean(viewsets.ViewSet):
+    @decorators.action(detail=True, methods=['delete'])
+    def clean_queue(self, request, version, website_id=None):
+        website: Website = Website.objects.filter(id=website_id).first()
+        allowed = request.user.has_perm('seosnap.view_website', website)
+        if not allowed or not website: return Response([])
+
+        website.queue_items.filter(status='completed').delete()
+
+        return Response([])
