@@ -15,19 +15,16 @@
 
 {% block object-tools-items %}
 <li>
+    {% url 'admin:seosnap_website_websitequeue_add' website.id|admin_urlquote as add_url %}
+    <a href="{% add_preserved_filters add_url %}" class="addlink">{% trans "Add Queue Item" %}</a>
+</li>
+<li>
     {% url 'admin:seosnap_website_change' website.id|admin_urlquote as website_url %}
     <a href="{{ website_url }}" class="website-link">{% trans "Website" %}</a>
 </li>
 <li>
-    {% url 'admin:seosnap_website_websitequeue' website.id|admin_urlquote as queue_url %}
-    <a href="{% add_preserved_filters queue_url %}" class="queuelink">{% trans "Queue" %}</a>
+    {% url 'admin:seosnap_website_websitepages' website.id|admin_urlquote as pages_url %}
+    <a href="{% add_preserved_filters pages_url %}" class="pageslink">{% trans "Pages" %}</a>
 </li>
-{% endblock %}
-
-{% block result_list %}
-    {{ website }}
-    {% if action_form and actions_on_top and cl.show_admin_actions %}{% admin_actions %}{% endif %}
-    {% result_list_custom cl website %}
-    {% if action_form and actions_on_bottom and cl.show_admin_actions %}{% admin_actions %}{% endif %}
 {% endblock %}
 
