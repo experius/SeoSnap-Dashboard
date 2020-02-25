@@ -1,6 +1,7 @@
 from typing import Optional
 
 from django.contrib import admin
+from django.utils.html import format_html
 from django_mysql.models import QuerySet
 from guardian.admin import GuardedModelAdmin
 
@@ -13,9 +14,9 @@ from seosnap.models import Website, Page, QueueItem
 
 @admin.register(Website)
 class WebsiteAdmin(GuardedModelAdmin):
-    list_display = ('name', 'domain', 'sitemap', 'created_at', 'updated_at', 'cache_updated_at')
+    list_display = ('name_link', 'domain', 'sitemap', 'created_at', 'updated_at', 'cache_updated_at')
     readonly_fields = ('cache_updated_at',)
-    list_display_links = ('name', 'domain')
+    list_display_links = ('domain',)
     change_form_template = 'admin/seosnap/edit_website.html'
 
     inlines = [
@@ -41,6 +42,10 @@ class WebsiteAdmin(GuardedModelAdmin):
                  name='%s_%s_websitequeue_change' % info),
         ]
         return new_urls + urls
+
+    def name_link(self, website):
+        url = f'/seosnap/website/{website.id}/pages'
+        return format_html('<a href="{}">{}</a>', url, website.name)
 
     def get_queryset(self, request):
         qs: QuerySet = super().get_queryset(request)
