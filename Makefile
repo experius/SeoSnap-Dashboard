@@ -10,7 +10,7 @@ up_dev:
 
 serve: migrate create_admin
 	echo 'Serving the backend'
-	python manage.py runserver 0.0.0.0:8000
+	python manage.py runserver 0.0.0.0:80
 
 install:
 	echo 'Running installation'

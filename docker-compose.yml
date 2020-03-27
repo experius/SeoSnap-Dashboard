@@ -7,6 +7,17 @@ services:
     restart: unless-stopped
     environment:
       DB_HOST_OVERRIDE: db
+      DB_ROOT_HOST:
+      DB_HOST:
+      DB_NAME:
+      DB_USER:
+      DB_PASS:
+      ADMIN_EMAIL:
+      ADMIN_NAME:
+      ADMIN_PASS:
+      ADMIN_SECRET:
+      ADMIN_DEBUG:
+      ADMIN_LOG_LEVEL:
     ports:
       - "80:80"
     depends_on:
