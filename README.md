@@ -1,8 +1,12 @@
 # Seosnap Dashboard
+TO run the dashboard run the following
 
 ```
-cp .env.example .env
-# Edit default settings
+# Install
+make install
 
-docker-compose up -d --build
+# Serve
+make serve
+## For development use
+make serve_dev
 ```

@@ -2,10 +2,9 @@ version: '3.7'
 services:
   dashboard:
     build: .
-    volumes:
-      - .:/code
     image: seosnap-dashboard
     container_name: seosnap_dashboard
+    restart: unless-stopped
     environment:
       DB_HOST_OVERRIDE: db
     ports:
@@ -18,18 +17,22 @@ services:
   db:
     image: mysql
     entrypoint: ['/entrypoint.sh', '--default-authentication-plugin=mysql_native_password']
+    restart: unless-stopped
     environment:
       MYSQL_ROOT_HOST: ${DB_ROOT_HOST}
       MYSQL_RANDOM_ROOT_PASSWORD: "yes"
       MYSQL_DATABASE: ${DB_NAME}
       MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PASS}
+    volumes:
+      - seosnap_dashboard_db:/var/lib/mysql
     ports:
       - "3306:3306"
-    volumes:
-      - ./dev/instance/mariadb:/var/lib/mysql
     networks:
       - seosnap_dashboard
+
+volumes:
+  seosnap_dashboard_db:
 
 networks:
   seosnap_dashboard:
