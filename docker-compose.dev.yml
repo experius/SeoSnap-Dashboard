@@ -2,11 +2,11 @@ version: '3.7'
 services:
   dashboard:
     build: .
-    restart: no
+    restart: "no"
     volumes:
       - .:/code
 
   db:
-    restart: no
+    restart: "no"
     volumes:
       - ./dev/instance/mariadb:/var/lib/mysql
