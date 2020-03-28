@@ -1,8 +1,9 @@
 version: '3.7'
 services:
   dashboard:
-    build: .
-    image: seosnap-dashboard
+    build:
+      context: .
+    image: experius/seosnap-dashboard
     container_name: seosnap_dashboard
     restart: unless-stopped
     environment:
