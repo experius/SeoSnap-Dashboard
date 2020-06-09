@@ -129,7 +129,7 @@ AUTHENTICATION_BACKENDS = (
     'guardian.backends.ObjectPermissionBackend',
 )
 
-#AUTH_USER_MODEL = 'seosnap.User'
+# AUTH_USER_MODEL = 'seosnap.SeosnapUser'
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/

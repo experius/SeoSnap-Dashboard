@@ -31,15 +31,18 @@ class WebsiteBaseAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         if self.website is None: return False
-        return request.user.has_perm('seosnap.change_website', self.website)
+        return request.user.has_perm('seosnap.change_website', self.website) \
+            or request.user.has_perm('seosnap.change_website')
 
     def has_view_permission(self, request, obj=None):
         if self.website is None: return False
-        return request.user.has_perm('seosnap.view_website', self.website)
+        return request.user.has_perm('seosnap.view_website', self.website) \
+            or request.user.has_perm('seosnap.view_website')
 
     def has_delete_permission(self, request, obj=None):
         if self.website is None: return False
-        return request.user.has_perm('seosnap.change_website', self.website)
+        return request.user.has_perm('seosnap.change_website', self.website) \
+            or request.user.has_perm('seosnap.change_website')
 
     def get_queryset(self, request):
         return super().get_queryset(request).filter(website=self.website.id)
