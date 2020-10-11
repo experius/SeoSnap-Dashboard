@@ -4,10 +4,10 @@ if [ -z ${var+x} ]; then
   export $(egrep -v '^#' .env | xargs)
 fi
 
-./manage.py migrate
+python manage.py migrate
 
 echo "Admin: $ADMIN_NAME"
 export DJANGO_SUPERUSER_PASSWORD="$ADMIN_PASS"
-./manage.py createsuperuser --username "$ADMIN_NAME" --email "$ADMIN_EMAIL" --no-input
+python manage.py createsuperuser --username "$ADMIN_NAME" --email "$ADMIN_EMAIL" --no-input
 
 python manage.py runserver 0.0.0.0:8080
