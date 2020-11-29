@@ -8,7 +8,6 @@ from guardian.admin import GuardedModelAdmin
 from seosnap.admin import QueueAdmin
 from seosnap.admin.extract_field import ExtractFieldInline
 from seosnap.admin.page import PageAdmin
-from seosnap.helpers import permissons
 from seosnap.models import Website, Page, QueueItem
 
 
@@ -29,17 +28,32 @@ class WebsiteAdmin(GuardedModelAdmin):
         info = self.model._meta.app_label, self.model._meta.model_name
         urls = super().get_urls()
         new_urls = [
-            path('<path:object_id>/pages/', self.admin_site.admin_view(self.page_listing),
-                 name='%s_%s_websitepages' % info),
-            path('<path:website_id>/pages/<path:object_id>/change', self.admin_site.admin_view(self.page_edit),
-                 name='%s_%s_websitepages_change' % info),
+            path(
+                '<path:object_id>/pages/',
+                self.admin_site.admin_view(self.page_listing),
+                name='%s_%s_websitepages' % info
+            ),
+            path(
+                '<path:website_id>/pages/<path:object_id>/change',
+                self.admin_site.admin_view(self.page_edit),
+                name='%s_%s_websitepages_change' % info
+            ),
             # Do something about duplicates
-            path('<path:object_id>/queue/', self.admin_site.admin_view(self.queue_listing),
-                 name='%s_%s_websitequeue' % info),
-            path('<path:website_id>/queue/add', self.admin_site.admin_view(self.queue_add),
-                 name='%s_%s_websitequeue_add' % info),
-            path('<path:website_id>/queue/<path:object_id>/change', self.admin_site.admin_view(self.queue_edit),
-                 name='%s_%s_websitequeue_change' % info),
+            path(
+                '<path:object_id>/queue/',
+                self.admin_site.admin_view(self.queue_listing),
+                name='%s_%s_websitequeue' % info
+            ),
+            path(
+                '<path:website_id>/queue/add',
+                self.admin_site.admin_view(self.queue_add),
+                name='%s_%s_websitequeue_add' % info
+            ),
+            path(
+                '<path:website_id>/queue/<path:object_id>/change',
+                self.admin_site.admin_view(self.queue_edit),
+                name='%s_%s_websitequeue_change' % info
+            ),
         ]
         return new_urls + urls
 
@@ -47,9 +61,8 @@ class WebsiteAdmin(GuardedModelAdmin):
         url = f'/seosnap/website/{website.id}/pages'
         return format_html('<a href="{}">{}</a>', url, website.name)
 
-    def get_queryset(self, request):
-        qs: QuerySet = super().get_queryset(request)
-        return permissons.filter_permitted_websites(qs, request.user)
+    def get_queryset(self, request) -> QuerySet:
+        return super().get_queryset(request)
 
     def page_listing(self, request, object_id=None):
         site: admin.AdminSite = self.admin_site
