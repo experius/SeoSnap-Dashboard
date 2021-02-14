@@ -1,0 +1,17 @@
+<p>One or more errors occurred while cachewarming the website: {{ website.name }}</p>
+
+<h3>Errors</h3>
+<table>
+    <tr>
+        <th>Url</th>
+        <th>Code</th>
+        <th>Time</th>
+    </tr>
+    {% for error in errors %}
+    <tr>
+        <td>{{ error.url }}</td>
+        <td>{{ error.code }}</td>
+        <td>{{ error.time }}</td>
+    </tr>
+    {% endfor %}
+</table>

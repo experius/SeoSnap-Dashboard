@@ -142,3 +142,10 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
 ]
+
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'localhost')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+EMAIL_PORT = os.getenv('EMAIL_PORT', '25')
+EMAIL_USE_TLS = bool(int(os.getenv('EMAIL_USE_TLS', False)))
+EMAIL_USE_SSL = bool(int(os.getenv('EMAIL_USE_SSL', False)))

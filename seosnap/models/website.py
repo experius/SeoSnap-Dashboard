@@ -1,3 +1,4 @@
+import django
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django_mysql.models import Model, QuerySet
@@ -16,6 +17,11 @@ class Website(Model):
     cache_updated_at = models.DateTimeField(null=True, default=None)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    notification_email = models.CharField(max_length=255, default='')
+    notification_failure_rate = models.IntegerField(default=10)
+    notification_sent_date = models.DateTimeField(default=django.utils.timezone.now)
+    notification_cooldown = models.IntegerField(default=3600)
 
     def __str__(self):
         return f'{self.name} - {self.domain}'

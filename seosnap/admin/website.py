@@ -13,8 +13,12 @@ from seosnap.models import Website, Page, QueueItem
 
 @admin.register(Website)
 class WebsiteAdmin(GuardedModelAdmin):
-    list_display = ('name_link', 'domain', 'sitemap', 'created_at', 'updated_at', 'cache_updated_at')
-    readonly_fields = ('cache_updated_at',)
+    list_display = (
+        'name_link', 'domain', 'sitemap',
+        'created_at', 'updated_at', 'cache_updated_at',
+        'notification_email', 'notification_failure_rate', 'notification_cooldown'
+    )
+    readonly_fields = ('cache_updated_at', 'notification_sent_date')
     list_display_links = ('domain',)
     change_form_template = 'admin/seosnap/edit_website.html'
 

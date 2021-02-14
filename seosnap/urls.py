@@ -4,6 +4,7 @@ from seosnap import views
 
 website_list = views.WebsiteViewSet.as_view({'get': 'list'})
 website_detail = views.WebsiteViewSet.as_view({'get': 'retrieve'})
+website_reporting = views.WebsiteReportFailure.as_view({'post': 'report_failure'})
 
 website_pages = views.PageWebsiteList.as_view({'get': 'pages'})
 website_pages_update = views.PageWebsiteUpdate.as_view({'put': 'update_pages'})
@@ -15,6 +16,7 @@ website_queue_clean = views.QueueWebsiteClean.as_view({'delete': 'clean_queue'})
 urlpatterns = [
     path('websites', website_list, name='websites-list'),
     path('websites/<int:pk>', website_detail, name='websites-retrieve'),
+    path('websites/<int:website_id>/reporting', website_reporting, name='websites-reporting'),
     path('websites/<int:website_id>/pages', website_pages, name='websites-pages-list'),
     path('websites/<int:website_id>/pages/update', website_pages_update, name='websites-pages-update'),
     path('websites/<int:website_id>/queue', website_queue, name='websites-queue-list'),
