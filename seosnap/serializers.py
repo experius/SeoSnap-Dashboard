@@ -26,7 +26,11 @@ class WebsiteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Website
-        fields = ('name', 'domain', 'sitemap', 'created_at', 'updated_at', 'extract_fields')
+        fields = (
+            'name', 'domain', 'sitemap',
+            'created_at', 'updated_at', 'extract_fields',
+            'notification_email', 'notification_failure_rate', 'notification_cooldown'
+        )
 
 
 class LightPageSerializer(serializers.ModelSerializer):

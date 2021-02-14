@@ -37,7 +37,7 @@ class WebsiteReportFailure(viewsets.ViewSet):
     @decorators.action(detail=True, methods=['post'])
     def report_failure(self, request, version, website_id=None):
         website: Website = Website.objects.filter(id=website_id).first()
-        errors = request.data['errors'] if isinstance(request.data['errors'], list) else []
+        errors = request.data if isinstance(request.data, list) else []
         message = render_to_string('reporting_email.html', {'errors': errors, 'website': website})
 
         if not website.notification_sent_date \
