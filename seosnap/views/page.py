@@ -72,3 +72,28 @@ class PageWebsiteUpdate(viewsets.ViewSet):
 
         serializer = PageSerializer(list(existing.values()), many=True)
         return Response(serializer.data)
+
+class PageWebsiteClean(viewsets.ViewSet):
+    schema = AutoSchema(manual_fields=[
+        coreapi.Field(
+            "date",
+            required=True,
+            location="form",
+            description="Delete all pages before this date/time YYYY-MM-DDTHH:MM:SS"
+        ),
+    ])
+
+    @decorators.action(detail=True, methods=['delete'])
+    def clean_pages(self, request, version, website_id=None):
+        website: Website = Website.objects.filter(id=website_id).first()
+        allowed = request.user.has_perm('seosnap.view_website', website)
+        if not allowed or not website: return Response([])
+
+        date = request.data['date'];
+
+        if not date:
+            return Response([])
+
+        website.pages.filter(updated_at__lte=date).delete()
+
+        return Response([])
