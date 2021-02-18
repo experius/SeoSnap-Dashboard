@@ -13,7 +13,7 @@ from seosnap.models import Website, Page, QueueItem
 
 @admin.register(Website)
 class WebsiteAdmin(GuardedModelAdmin):
-    list_display = ('name_link', 'domain', 'sitemap', 'created_at', 'updated_at', 'cache_updated_at')
+    list_display = ('name_link', 'domain', 'sitemap', 'cache_quality', 'created_at', 'updated_at', 'cache_updated_at')
     readonly_fields = ('cache_updated_at',)
     list_display_links = ('domain',)
     change_form_template = 'admin/seosnap/edit_website.html'
@@ -56,6 +56,19 @@ class WebsiteAdmin(GuardedModelAdmin):
             ),
         ]
         return new_urls + urls
+
+    def cache_quality(self, website):
+        all_pages = website.pages.count()
+
+        cached_pages = website.pages\
+            .filter(website_id=website.id)\
+            .filter(status_code=200)\
+            .filter(cache_status='cached')\
+            .count()
+
+        percentage = (cached_pages / all_pages) * 100;
+
+        return str(round(percentage, 2)) + '%'
 
     def name_link(self, website):
         url = f'/seosnap/website/{website.id}/pages'
