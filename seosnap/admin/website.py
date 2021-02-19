@@ -13,7 +13,6 @@ from seosnap.models import Website, Page, QueueItem
 
 @admin.register(Website)
 class WebsiteAdmin(GuardedModelAdmin):
-<<<<<<< HEAD
     list_display = (
         'name_link', 'domain', 'sitemap', 'cache_quality',
         'created_at', 'updated_at', 'cache_updated_at',
