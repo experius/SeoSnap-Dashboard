@@ -3,7 +3,7 @@ services:
   dashboard:
     build:
       context: .
-    image: experius/seosnap-dashboard
+    image: experius/seosnap-dashboard:${TAG}
     container_name: seosnap_dashboard
     restart: unless-stopped
     environment:

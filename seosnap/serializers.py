@@ -13,8 +13,9 @@ class PageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Page
         fields = (
-        'website', 'address', 'content_type', 'status_code', 'cache_status', 'cached_at', 'created_at', 'updated_at',
-        'extract_fields')
+            'website', 'address', 'content_type', 'status_code', 'cache_status', 'cached_at', 'created_at',
+            'updated_at',
+            'extract_fields')
         read_only_fields = ('website', 'created_at', 'updated_at')
 
 
@@ -25,7 +26,11 @@ class WebsiteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Website
-        fields = ('name', 'domain', 'sitemap', 'created_at', 'updated_at', 'extract_fields')
+        fields = (
+            'name', 'domain', 'sitemap',
+            'created_at', 'updated_at', 'extract_fields',
+            'notification_email', 'notification_failure_rate', 'notification_cooldown'
+        )
 
 
 class LightPageSerializer(serializers.ModelSerializer):
@@ -42,3 +47,7 @@ class QueueItemSerializer(serializers.ModelSerializer):
         model = QueueItem
         fields = ('page', 'status')
         read_only_fields = ('page', 'priority')
+
+
+class WebsiteReportingSerializer(serializers.Serializer):
+    errors = serializers.ListField()

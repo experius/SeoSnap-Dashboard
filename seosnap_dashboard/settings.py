@@ -23,9 +23,6 @@ load_dotenv(dotenv_path=os.path.join(BASE_DIR, '.env'), override=False)
 SECRET_KEY = os.getenv('ADMIN_SECRET')
 DEBUG = bool(os.getenv('ADMIN_DEBUG'))
 
-STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-
 ALLOWED_HOSTS = ['*']
 
 # Application definition
@@ -55,7 +52,7 @@ ROOT_URLCONF = 'seosnap_dashboard.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')],
+        'DIRS': [os.path.join(BASE_DIR, 'seosnap', 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -142,3 +139,13 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 STATIC_URL = '/static/'
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
+
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'localhost')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+EMAIL_PORT = os.getenv('EMAIL_PORT', '25')
+EMAIL_USE_TLS = bool(int(os.getenv('EMAIL_USE_TLS', False)))
+EMAIL_USE_SSL = bool(int(os.getenv('EMAIL_USE_SSL', False)))
