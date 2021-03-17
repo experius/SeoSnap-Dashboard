@@ -70,7 +70,7 @@ class WebsiteAdmin(GuardedModelAdmin):
             .filter(cache_status='cached')\
             .count()
 
-        percentage = (cached_pages / all_pages) * 100;
+        percentage = ((cached_pages + 1) / (all_pages + 1)) * 100
 
         return str(round(percentage, 2)) + '%'
 
