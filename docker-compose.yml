@@ -3,7 +3,7 @@ services:
   dashboard:
     build:
       context: .
-    image: experiusnl/seosnap-dashboard:${TAG}
+    image: experiusnl/seosnap-dashboard
     container_name: seosnap_dashboard
     restart: unless-stopped
     environment:
@@ -20,7 +20,7 @@ services:
       ADMIN_DEBUG:
       ADMIN_LOG_LEVEL:
     ports:
-      - "80:80"
+      - "8000:80"
     depends_on:
       - db
     networks:
@@ -39,7 +39,7 @@ services:
     volumes:
       - seosnap_dashboard_db:/var/lib/mysql
     ports:
-      - "3306:3306"
+      - "3307:3306"
     networks:
       - seosnap_dashboard
 

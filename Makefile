@@ -25,6 +25,7 @@ up_dev: ## Starts up all the services in dev mode
 serve: migrate create_admin ## Starts django server
 	echo 'Serving the backend'
 	python manage.py runserver 0.0.0.0:80
+    # python manage.py runserver 0.0.0.0:80
 
 install: ## Sets up environment for local installation
 	echo 'Running installation'

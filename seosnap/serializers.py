@@ -13,7 +13,9 @@ class PageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Page
         fields = (
-            'website', 'address', 'content_type', 'status_code', 'cache_status', 'cached_at', 'created_at',
+            'website', 'address',
+            'x_magento_tags',
+            'content_type', 'status_code', 'cache_status', 'cached_at', 'created_at',
             'updated_at',
             'extract_fields')
         read_only_fields = ('website', 'created_at', 'updated_at')

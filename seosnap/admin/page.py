@@ -24,14 +24,20 @@ def enqueue(admin_model, request, queryset):
 @admin.register(Page)
 class PageAdmin(WebsiteBaseAdmin):
     list_display = (
-        'address_link', 'address_full', 'content_type', 'status_code', 'cache_status', 'cached_at', 'created_at',
+        'address_link', 'address_full',
+        # 'x_magento_tags',
+        'content_type', 'status_code', 'cache_status', 'cached_at', 'created_at',
         'updated_at')
 
     readonly_fields = (
-        'website', 'address', 'address_full', 'content_type', 'status_code', 'extract_fields', 'cache_status',
+        'website', 'address', 'address_full',
+        # 'x_magento_tags',
+        'content_type', 'status_code', 'extract_fields', 'cache_status',
         'cached_at', 'created_at', 'updated_at')
 
-    search_fields = ('address', 'content_type', 'status_code', 'extract_fields', 'cached_at')
+    search_fields = ('address',
+                     # 'x_magento_tags',
+                     'content_type', 'status_code', 'extract_fields', 'cached_at')
 
     list_filter = ('status_code', 'content_type', 'cache_status')
 
