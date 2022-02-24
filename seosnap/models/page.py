@@ -24,15 +24,9 @@ class Page(Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __setattr__(self, attrname, val):
-        print('---- --- setattrxxxxxxxxxxx ------')
         setter_func = 'setter_' + attrname
-        print(attrname)
-        print(setter_func)
-        # print(self.__dict__)
-        # print(attrname in self.__dict__)
 
         if attrname in self.__dict__ and callable(getattr(self, setter_func, None)):
-            print("yes")
             super(Page, self).__setattr__(attrname, getattr(self, setter_func)(val))
         elif attrname == "x_magento_tags":
             super(Page, self).__setattr__(attrname, getattr(self, setter_func)(val))
@@ -40,11 +34,11 @@ class Page(Model):
             super(Page, self).__setattr__(attrname, val)
 
     def setter_x_magento_tags(self, value):
-        print('-- set magento tag ---')
+        if type(value) is bytes:
+            return value
         return value.encode()
 
     def setter_id(self, value):
-        print('-- set id ---')
         return value
 
     def __str__(self):
