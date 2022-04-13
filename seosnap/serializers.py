@@ -13,6 +13,7 @@ class PageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Page
         fields = (
+            'id',
             'website', 'address',
             'content_type', 'status_code', 'cache_status', 'cached_at', 'created_at',
             'updated_at',
@@ -49,6 +50,15 @@ class QueueItemSerializer(serializers.ModelSerializer):
         model = QueueItem
         fields = ('page', 'status')
         read_only_fields = ('page', 'priority')
+
+
+class QueueSerializer(serializers.ModelSerializer):
+    page = LightPageSerializer(read_only=True)
+
+    class Meta:
+        model = QueueItem
+        fields = ('page_id', 'page', 'status', 'priority', 'created_at')
+        read_only_fields = ('priority', 'created_at')
 
 
 class WebsiteReportingSerializer(serializers.Serializer):

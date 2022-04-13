@@ -34,7 +34,7 @@ class Page(Model):
             super(Page, self).__setattr__(attrname, val)
 
     def setter_x_magento_tags(self, value):
-        if type(value) is bytes:
+        if type(value) is bytes or value is None:
             return value
         return value.encode()
 

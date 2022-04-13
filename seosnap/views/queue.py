@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.schemas import AutoSchema
 
 from seosnap.models import Website, QueueItem
-from seosnap.serializers import QueueItemSerializer
+from seosnap.serializers import QueueItemSerializer, QueueSerializer
 
 
 class QueueWebsiteList(viewsets.ViewSet, PageNumberPagination):
@@ -28,6 +28,35 @@ class QueueWebsiteList(viewsets.ViewSet, PageNumberPagination):
 
         serializer = QueueItemSerializer(data, many=True)
         return Response(serializer.data)
+
+    @decorators.action(detail=True, methods=['get'])
+    def queueProgress(self, request, version, website_id=None):
+        website = Website.objects.filter(id=website_id).first()
+
+        if request.GET.get('filter'):
+            queryset = website.queue_items.filter(status__in=['scheduled', 'unscheduled']).filter(page__address__icontains=request.GET.get('filter'))
+        else:
+            queryset = website.queue_items.filter(status__in=['scheduled', 'unscheduled'])
+
+        if request.GET.get('limit'):
+            self.page_size = request.GET.get('limit')
+
+        page = self.paginate_queryset(queryset, request)
+        if page is not None:
+            serializer = QueueSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = QueueSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @decorators.action(detail=True, methods=['get'])
+    def todoCount(self, request, version, website_id=None):
+        queItemCount = QueueItem.objects\
+            .filter(website_id=website_id)\
+            .filter(status__in=['scheduled', 'unscheduled'])\
+            .count()
+
+        return Response(queItemCount)
 
 
 class QueueWebsiteUpdate(viewsets.ViewSet):
