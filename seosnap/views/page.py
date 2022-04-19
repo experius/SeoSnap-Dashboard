@@ -45,7 +45,7 @@ class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
         return Response(pagesCount)
 
     @decorators.action(detail=True, methods=['get'])
-    def sync_pages(self, request, version, website_id=None):
+    def sync(self, request, version, website_id=None):
         website = Website.objects.filter(id=website_id).first()
         domain = website.domain
 

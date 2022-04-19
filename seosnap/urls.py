@@ -8,7 +8,7 @@ website_reporting = views.WebsiteReportFailure.as_view({'post': 'report_failure'
 
 website_pages = views.PageWebsiteList.as_view({'get': 'pages'})
 website_pages_count = views.PageWebsiteList.as_view({'get': 'count'})
-website_pages_sync_pages = views.PageWebsiteList.as_view({'get': 'sync_pages'})
+website_pages_sync = views.PageWebsiteList.as_view({'get': 'sync'})
 website_pages_update = views.PageWebsiteUpdate.as_view({'put': 'update_pages'})
 website_pages_clean = views.PageWebsiteClean.as_view({'delete': 'clean_pages'})
 
@@ -27,7 +27,7 @@ urlpatterns = [
     path('websites/<int:website_id>/reporting', website_reporting, name='websites-reporting'),
     path('websites/<int:website_id>/pages', website_pages, name='websites-pages-list'),
     path('websites/<int:website_id>/pages/count', website_pages_count, name='websites-pages-count'),
-    path('websites/<int:website_id>/pages/sync', website_pages_sync_pages, name='websites-pages-sync_pages'),
+    path('websites/<int:website_id>/pages/sync', website_pages_sync, name='websites-pages-sync'),
 
     path('websites/<int:website_id>/pages/update', website_pages_update, name='websites-pages-update'),
     path('websites/<int:website_id>/pages/clean', website_pages_clean, name='websites-pages-clean'),
