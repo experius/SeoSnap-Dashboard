@@ -49,7 +49,6 @@ class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
         website = Website.objects.filter(id=website_id).first()
         domain = website.domain
 
-        # TODO multiple sitemaps?!?
         siteMapUrl = website.sitemap
 
         # TODO minutes to setting
@@ -59,8 +58,33 @@ class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
         r = requests.get(siteMapUrl)
         root = ET.fromstring(r.text)
 
+        print("start <-")
+
+        # check multiple sitemaps
+        # TODO make this way faster...
+        rootData = None
+        for sitemapMap in root:
+            if sitemapMap.tag.endswith("sitemap"):
+                for pageData in sitemapMap:
+                    if pageData.tag.endswith('loc'):
+                        print(pageData.text)
+                        request = requests.get(pageData.text)
+                        data = ET.fromstring(request.text)
+
+                        if rootData is None:
+                            rootData = data
+                        else:
+                            for url in data:
+                                rootData.append(url)
+            else:
+                rootData = root
+                break
+
+        print("start")
+        print(len(rootData))
+
         urlList = []
-        for pageSiteMap in root:
+        for pageSiteMap in rootData:
             url = None
             lastMod = None
 
