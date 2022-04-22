@@ -1,4 +1,4 @@
-import coreapi, coreschema, requests
+import coreapi, coreschema, requests, xmltodict
 import xml.etree.ElementTree as ET
 from django.db import transaction
 from rest_framework import viewsets, decorators
@@ -12,6 +12,9 @@ from seosnap.serializers import PageSerializer
 from django.core import serializers
 from django.http.response import JsonResponse, HttpResponse
 from django.core.serializers import serialize
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections import OrderedDict
+
 
 class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
     @decorators.action(detail=True, methods=['get'])
@@ -21,7 +24,8 @@ class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
         if not allowed or not website: return Response([])
 
         if request.GET.get('filter'):
-            queryset = list(filter(lambda page: page.address.startswith(request.GET.get('filter')), website.pages.all()))
+            queryset = list(
+                filter(lambda page: page.address.startswith(request.GET.get('filter')), website.pages.all()))
         else:
             queryset = website.pages.all()
 
@@ -44,110 +48,159 @@ class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
 
         return Response(pagesCount)
 
+    def _getSitemapData(self, website: Website, sitemapUrl):
+        r = requests.get(sitemapUrl)
+        rootDict = xmltodict.parse(r.text)
+        data = rootDict['urlset']['url']
+
+        for i, d in enumerate(data):
+            if d['loc'].startswith(website.domain):
+                data[i]['loc'] = "/" + d['loc'][len(website.domain):]
+
+            if "lastmod" in d:
+                data[i]['lastmod'] = datetime.strptime(d['lastmod'], '%Y-%m-%dT%H:%M:%S%z')
+            else:
+                data[i]['lastmod'] = None
+
+        return data
+
+    def _getSitemapUrls(self, website: Website):
+        r = requests.get(website.sitemap)
+        rootDict = xmltodict.parse(r.text)
+
+        urls = []
+        if "urlset" in rootDict:
+            urls = rootDict['urlset']['url']
+
+            for i, d in enumerate(urls):
+                if d['loc'].startswith(website.domain):
+                    urls[i]['loc'] = "/" + d['loc'][len(website.domain):]
+
+                if "lastmod" in d:
+                    urls[i]['lastmod'] = datetime.strptime(d['lastmod'], '%Y-%m-%dT%H:%M:%S%z')
+                else:
+                    urls[i]['lastmod'] = None
+
+        if "sitemapindex" in rootDict:
+            threads = []
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                for sitemap in rootDict['sitemapindex']['sitemap']:
+                    threads.append(executor.submit(self._getSitemapData, website, sitemap['loc']))
+
+                for task in as_completed(threads):
+                    print("sitemap loaded")
+                    result = task.result()
+                    urls.extend(result)
+
+        return urls
+
+    def _multiThreadedPageSync(self, website_id, website, urlsData, doCacheAgain):
+        print("start: _multiThreadedPageSync")
+        createQueueObjects = []
+        urlsList = set()
+        count = 0
+
+        for urlData in urlsData:
+            urlsList.add(urlData['loc'])
+
+        existingPages = list(Page.objects.filter(website_id=website_id).filter(address__in=urlsList).values_list('address', 'updated_at'))
+        addresses = Page.objects.values_list('address', flat=True)
+
+        for urlData in urlsData:
+
+            if urlData['loc'] in addresses:
+                urlsList.remove(urlData['loc'])
+
+                if urlData['lastmod'] is not None:
+                    # print(type(existingPages))
+                    for page in existingPages:
+
+                        if page[0] == urlData['loc']:
+                            # if last mod is longer than X min ago
+                            # Or later than page updated at
+                            # [1] => updated_at
+
+                            sitemapDiff = page[1] - urlData['lastmod']
+                            rendertronDiff = page[1] - doCacheAgain
+                            if (sitemapDiff.total_seconds() <= 0) or (rendertronDiff.total_seconds() <= 0):
+                                print("do queue again")
+
+                                queue_item_found = QueueItem.objects.filter(page=page).filter(
+                                    status="unscheduled").first()
+                                if queue_item_found is None:
+                                    queue_item: QueueItem = QueueItem(page=page, website=website, priority=10000)
+                                    createQueueObjects.append(queue_item)
+                else:
+                    print("No last mod <----")
+                    print(urlData['loc'])
+
+        createPageObjects = []
+
+        print("HOII <------")
+        print(len(urlsData))
+        print(len(urlsList))
+        print(count)
+        for url in urlsList:
+            # print(" ---- start --- ")
+            print("create: " + str(url))
+            # print(url in addresses)
+            # print(" ---- END --- ")
+            page: Page = Page(address=url, website=website)
+            createPageObjects.append(page)
+
+        Page.objects.bulk_create(createPageObjects)
+        pages = Page.objects.filter(address__in=urlsList, website_id=website_id)
+
+        for page in pages:
+            queue_item: QueueItem = QueueItem(page=page, website=website, priority=10000)
+            createQueueObjects.append(queue_item)
+
+        QueueItem.objects.bulk_create(createQueueObjects)
+
     @decorators.action(detail=True, methods=['get'])
     def sync(self, request, version, website_id=None):
+        print("start call")
+
         website = Website.objects.filter(id=website_id).first()
-        domain = website.domain
-
-        siteMapUrl = website.sitemap
-
-        # TODO minutes to setting
+        urlsData = self._getSitemapUrls(website)
         doCacheAgain = datetime.now(timezone.utc) - timedelta(minutes=10000)
 
-        # Get sitemap data
-        r = requests.get(siteMapUrl)
-        root = ET.fromstring(r.text)
+        print("-- overview --")
+        print("total url count: " + str(len(urlsData)))
+        print("-- start sync --")
 
-        print("start <-")
+        size = 500
+        for i in range(0, len(urlsData), size):
+            data = urlsData[i:i + size]
+            self._multiThreadedPageSync(website_id, website, data, doCacheAgain)
 
-        # check multiple sitemaps
-        # TODO make this way faster...
-        rootData = None
-        for sitemapMap in root:
-            if sitemapMap.tag.endswith("sitemap"):
-                for pageData in sitemapMap:
-                    if pageData.tag.endswith('loc'):
-                        print(pageData.text)
-                        request = requests.get(pageData.text)
-                        data = ET.fromstring(request.text)
+        # threads = []
+        # with ThreadPoolExecutor(max_workers=1) as executor:
+        #     for i in range(0, len(urlsData), size):
+        #         data = urlsData[i:i + size]
+        #         threads.append(executor.submit(self._multiThreadedPageSync, website_id, website, data, doCacheAgain))
+        #
+        #     for task in as_completed(threads):
+        #         print("TASK DONE")
 
-                        if rootData is None:
-                            rootData = data
-                        else:
-                            for url in data:
-                                rootData.append(url)
-            else:
-                rootData = root
-                break
+        print("-- start delete --")
 
-        print("start")
-        print(len(rootData))
+        urlList = map(lambda x: x["loc"], urlsData)
+        deletablePages = Page.objects.filter(website_id=website_id).exclude(address__in=urlList) \
+            .exclude(id__in=QueueItem.objects.filter(status="unscheduled").values('page_id'))
 
-        urlList = []
-        for pageSiteMap in rootData:
-            url = None
-            lastMod = None
-
-            # Get sitemap data
-            for pageData in pageSiteMap:
-                if pageData.tag.endswith('loc'):
-                    url = pageData.text
-                    if url.startswith(domain):
-                        url = "/" + url[len(domain):]
-                    urlList.append(url)
-
-                if pageData.tag.endswith('lastmod'):
-                    lastMod = datetime.strptime(pageData.text, '%Y-%m-%dT%H:%M:%S%z')
-
-            if url is not None:
-
-                # check if page is in db
-                page = Page.objects.filter(website_id=website_id).filter(address=url).first()
-                if page is None:
-                    # Url not found in DB
-                    # Shoot page in DB and add queue item
-                    print("nope <<<-----------------------------------------")
-                    print(url)
-
-                    page: Page = Page(address=url, website=website)
-                    page.save()
-
-                    queue_item: QueueItem = QueueItem(page=page, website=website, priority=10000)
-                    queue_item.save()
-                else:
-                    # Page found in DB
-                    # check last updated for mismatch with SeoSnap and delete
-
-                    if lastMod is not None:
-                        # if last mod is longer than X min ago
-                        # Or later than page updated at
-
-                        sitemapDiff = page.updated_at - lastMod
-                        rendertronDiff = page.updated_at - doCacheAgain
-                        if (sitemapDiff.total_seconds() <= 0) or (rendertronDiff.total_seconds() <= 0):
-                            print("REDO <<<<----------")
-                            print(page.address)
-
-                            queue_item_found = QueueItem.objects.filter(page=page).filter(status="unscheduled").first()
-                            if queue_item_found is None:
-                                queue_item: QueueItem = QueueItem(page=page, website=website, priority=10000)
-                                queue_item.save()
-                    else:
-                        print("no last modddddddd <<<< =-----------")
-                        print(page.address)
-            else:
-                print("errorrrrrrrrrrrrrrrrrrrrr")
-
-        deletablePages = Page.objects.filter(website_id=website_id).exclude(address__in=urlList)
         for page in deletablePages:
             head, sep, tail = page.address.partition('?')
-            queue_item_found = QueueItem.objects.filter(page=page).filter(status="unscheduled").first()
 
-            if head not in urlList and queue_item_found is None:
+            if head not in urlList:
+                print("delete: " + str(head))
                 QueueItem.objects.filter(page=page).delete()
                 page.delete()
 
+        print("-- fully delete --")
+
         return HttpResponse(status=200)
+
 
 class PageWebsiteUpdate(viewsets.ViewSet):
     schema = AutoSchema(manual_fields=[
@@ -231,7 +284,9 @@ class RedoPageCache(viewsets.ViewSet):
         print(tags)
         print(tags.split(' '))
 
-        queryset = list(filter(lambda page: any(' ' + word + ' ' in ' ' + page.x_magento_tags.decode('UTF-8') + ' ' for word in tags.split(' ')), website.pages.all()))
+        queryset = list(filter(lambda page: any(
+            ' ' + word + ' ' in ' ' + page.x_magento_tags.decode('UTF-8') + ' ' for word in tags.split(' ')),
+                               website.pages.all()))
         # if any(word in 'some one long two phrase three' for word in list_):
 
         # Length of queryset
