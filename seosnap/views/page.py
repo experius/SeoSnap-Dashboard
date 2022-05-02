@@ -106,6 +106,9 @@ class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
         existingPages = list(Page.objects.filter(website_id=website_id).filter(address__in=urlsList).values_list('address', 'updated_at'))
         addresses = Page.objects.values_list('address', flat=True)
 
+        # TODO check if this works
+        # addresses = Page.objects..filter(address__in=urlsList).values_list('address', flat=True)
+
         for urlData in urlsData:
 
             if urlData['loc'] in addresses:
@@ -145,6 +148,12 @@ class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
             print("create: " + str(url))
             # print(url in addresses)
             # print(" ---- END --- ")
+
+            # TODO do i want a check and is this good enough
+            mobileUrl = url + "?mobile=true"
+            mobilePage: Page = Page(address=mobileUrl, website=website)
+            createPageObjects.append(mobilePage)
+
             page: Page = Page(address=url, website=website)
             createPageObjects.append(page)
 
@@ -173,15 +182,6 @@ class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
         for i in range(0, len(urlsData), size):
             data = urlsData[i:i + size]
             self._multiThreadedPageSync(website_id, website, data, doCacheAgain)
-
-        # threads = []
-        # with ThreadPoolExecutor(max_workers=1) as executor:
-        #     for i in range(0, len(urlsData), size):
-        #         data = urlsData[i:i + size]
-        #         threads.append(executor.submit(self._multiThreadedPageSync, website_id, website, data, doCacheAgain))
-        #
-        #     for task in as_completed(threads):
-        #         print("TASK DONE")
 
         print("-- start delete --")
 
