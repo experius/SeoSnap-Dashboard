@@ -30,7 +30,7 @@ class QueueWebsiteList(viewsets.ViewSet, PageNumberPagination):
         return Response(serializer.data)
 
     @decorators.action(detail=True, methods=['get'])
-    def queueProgress(self, request, version, website_id=None):
+    def queue_progress(self, request, version, website_id=None):
         website = Website.objects.filter(id=website_id).first()
 
         if request.GET.get('filter'):
@@ -50,7 +50,7 @@ class QueueWebsiteList(viewsets.ViewSet, PageNumberPagination):
         return Response(serializer.data)
 
     @decorators.action(detail=True, methods=['get'])
-    def todoCount(self, request, version, website_id=None):
+    def todo_count(self, request, version, website_id=None):
         queItemCount = QueueItem.objects\
             .filter(website_id=website_id)\
             .filter(status__in=['scheduled', 'unscheduled'])\

@@ -6,17 +6,42 @@ import coreschema
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils import timezone
-from rest_framework import viewsets, decorators
+from django.http import JsonResponse
 from rest_framework.response import Response
+from rest_framework import viewsets, decorators
 from rest_framework.schemas import AutoSchema
+from django.core import serializers
+from seosnap.serializers import PageSerializer
 
-from seosnap.models import Website
+from seosnap.models import Website, Page
 from seosnap.serializers import WebsiteSerializer, WebsiteReportingSerializer
 
 
 class WebsiteViewSet(viewsets.ModelViewSet):
     queryset = Website.objects.all()
     serializer_class = WebsiteSerializer
+
+
+class WebsiteReport(viewsets.ViewSet):
+    @decorators.action(detail=True, methods=['get'])
+    def get_logging(self, request, version, website_id=None):
+        one_hour_ago = timezone.now() - timedelta(hours=1)
+        lastHourUpdated = Page.objects \
+            .filter(website_id=website_id) \
+            .filter(cache_status='cached') \
+            .filter(updated_at__gte=one_hour_ago) \
+            .count()
+
+        pages = Page.objects \
+            .filter(website_id=website_id) \
+            .filter(cache_status='cached') \
+            .order_by('updated_at')[:50]
+        pageSerializer = PageSerializer(pages, many=True)
+
+        return JsonResponse({
+            "successful_last_hour": lastHourUpdated,
+            "last_updated_pages": pageSerializer.data
+        })
 
 
 class WebsiteReportFailure(viewsets.ViewSet):

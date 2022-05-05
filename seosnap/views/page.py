@@ -308,36 +308,21 @@ class RedoPageCache(viewsets.ViewSet):
     @decorators.action(detail=True, methods=['post'])
     def cache_redo_website(self, request, version, website_id=None):
         print(" --- start request ---")
-        print("test")
 
         website: Website = Website.objects.filter(id=website_id).first()
-        print("website")
-        print(website)
-
-        print("request")
-        print(request)
-        print(request.data)
-        print(request.data['pageId'])
-
         if request.data['pageId']:
-            print('1')
+            prio = 10000
+            if request.data['priority']:
+                prio = 1
+
             page: Page = website.pages.filter(id=request.data['pageId'])
-            print(page)
-            print(page[0])
 
-            print('2')
-            queue_item: QueueItem = QueueItem(page=page[0], website=website, priority=10000)
-
-            print('3')
+            queue_item: QueueItem = QueueItem(page=page[0], website=website, priority=prio)
             queue_item.save()
-            print(len(page))
-            print(queue_item)
 
             data = serialize("json", [queue_item], fields=('page', 'website', 'status', 'priority', 'created_at'))
 
-            print('4')
-
             return HttpResponse(data)
 
-        # Todo exception if no page
+        # TODO exception or other resturl
         return Response([''])
