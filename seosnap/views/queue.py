@@ -91,6 +91,15 @@ class QueueWebsiteUpdate(viewsets.ViewSet):
 
         return HttpResponse(status=200)
 
+    @decorators.action(detail=True, methods=['post'])
+    def items_update_priority(self, request, version, website_id=None):
+        QueueItem.objects \
+            .filter(website_id=website_id) \
+            .filter(id__in=request.data.values()) \
+            .update(priority=10)
+
+        return HttpResponse(status=200)
+
     @decorators.action(detail=True, methods=['put'])
     def update_queue(self, request, version, website_id=None):
         website = Website.objects.filter(id=website_id).first()
@@ -138,3 +147,10 @@ class QueueWebsiteClean(viewsets.ViewSet):
             .delete()
 
         return HttpResponse(status=200)
+
+    @decorators.action(detail=True, methods=['post'])
+    def delete_multiple_queue_items(self, request, version, website_id=None):
+        QueueItem.objects.filter(website_id=website_id).filter(id__in=request.data.values()).delete()
+
+        return HttpResponse(status=200)
+

@@ -273,3 +273,21 @@ class RedoPageCache(viewsets.ViewSet):
             return HttpResponse(data)
 
         return Response([''])
+
+    @decorators.action(detail=True, methods=['post'])
+    def cache_redo_addresses(self, request, version, website_id=None):
+        createQueueObjects = []
+        website: Website = Website.objects.filter(id=website_id).first()
+
+        if request.data:
+            recachePages = Page.objects.filter(website_id=website_id).filter(address__in=request.data.values())
+
+            for page in recachePages:
+                queue_item: QueueItem = QueueItem(page=page, website=website, priority=10000)
+                createQueueObjects.append(queue_item)
+
+            QueueItem.objects.bulk_create(createQueueObjects)
+
+            return HttpResponse(status=200)
+
+        return HttpResponse(status=404)
