@@ -49,7 +49,7 @@ class QueueItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = QueueItem
         fields = ('page', 'status')
-        read_only_fields = ('page', 'priority')
+        read_only_fields = ('id', 'page', 'priority')
 
 
 class QueueSerializer(serializers.ModelSerializer):
@@ -57,8 +57,8 @@ class QueueSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = QueueItem
-        fields = ('page_id', 'page', 'status', 'priority', 'created_at')
-        read_only_fields = ('priority', 'created_at')
+        fields = ('id', 'page_id', 'page', 'status', 'priority', 'created_at')
+        read_only_fields = ('id', 'priority', 'created_at')
 
 
 class WebsiteReportingSerializer(serializers.Serializer):

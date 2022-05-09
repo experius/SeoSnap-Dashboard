@@ -5,6 +5,7 @@ from rest_framework import viewsets, decorators
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.schemas import AutoSchema
+from django.http.response import HttpResponse
 
 from seosnap.models import Website, QueueItem
 from seosnap.serializers import QueueItemSerializer, QueueSerializer
@@ -75,6 +76,22 @@ class QueueWebsiteUpdate(viewsets.ViewSet):
     ])
 
     @decorators.action(detail=True, methods=['put'])
+    def update_priority(self, request, version, website_id=None, queue_item_id=None):
+        print("im hereee")
+        item = QueueItem.objects \
+            .filter(website_id=website_id) \
+            .filter(id=queue_item_id) \
+            .first()
+
+        if item is None:
+            return HttpResponse(status=404)
+
+        item.priority = 1
+        item.save()
+
+        return HttpResponse(status=200)
+
+    @decorators.action(detail=True, methods=['put'])
     def update_queue(self, request, version, website_id=None):
         website = Website.objects.filter(id=website_id).first()
         allowed = request.user.has_perm('seosnap.view_website', website)
@@ -112,3 +129,12 @@ class QueueWebsiteClean(viewsets.ViewSet):
         website.queue_items.filter(status='completed').delete()
 
         return Response([])
+
+    @decorators.action(detail=True, methods=['delete'])
+    def delete_queue_item(self, request, version, website_id=None, queue_item_id=None):
+        QueueItem.objects \
+            .filter(website_id=website_id) \
+            .filter(id=queue_item_id) \
+            .delete()
+
+        return HttpResponse(status=200)

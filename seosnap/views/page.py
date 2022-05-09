@@ -8,6 +8,7 @@ from rest_framework.schemas import AutoSchema
 from datetime import datetime, timedelta, timezone
 
 from seosnap.models import Page, Website, QueueItem
+from seosnap.models.sitemap import Sitemap
 from seosnap.serializers import PageSerializer
 from django.core import serializers
 from django.http.response import JsonResponse, HttpResponse
@@ -48,52 +49,6 @@ class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
 
         return Response(pagesCount)
 
-    def _getSitemapData(self, website: Website, sitemapUrl):
-        r = requests.get(sitemapUrl)
-        rootDict = xmltodict.parse(r.text)
-        data = rootDict['urlset']['url']
-
-        for i, d in enumerate(data):
-            if d['loc'].startswith(website.domain):
-                data[i]['loc'] = "/" + d['loc'][len(website.domain):]
-
-            if "lastmod" in d:
-                data[i]['lastmod'] = datetime.strptime(d['lastmod'], '%Y-%m-%dT%H:%M:%S%z')
-            else:
-                data[i]['lastmod'] = None
-
-        return data
-
-    def _getSitemapUrls(self, website: Website):
-        r = requests.get(website.sitemap)
-        rootDict = xmltodict.parse(r.text)
-
-        urls = []
-        if "urlset" in rootDict:
-            urls = rootDict['urlset']['url']
-
-            for i, d in enumerate(urls):
-                if d['loc'].startswith(website.domain):
-                    urls[i]['loc'] = "/" + d['loc'][len(website.domain):]
-
-                if "lastmod" in d:
-                    urls[i]['lastmod'] = datetime.strptime(d['lastmod'], '%Y-%m-%dT%H:%M:%S%z')
-                else:
-                    urls[i]['lastmod'] = None
-
-        if "sitemapindex" in rootDict:
-            threads = []
-            with ThreadPoolExecutor(max_workers=5) as executor:
-                for sitemap in rootDict['sitemapindex']['sitemap']:
-                    threads.append(executor.submit(self._getSitemapData, website, sitemap['loc']))
-
-                for task in as_completed(threads):
-                    print("sitemap loaded")
-                    result = task.result()
-                    urls.extend(result)
-
-        return urls
-
     def _multiThreadedPageSync(self, website_id, website, urlsData, doCacheAgain):
         print("start: _multiThreadedPageSync")
         createQueueObjects = []
@@ -109,33 +64,32 @@ class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
         # TODO check if this works
         # addresses = Page.objects..filter(address__in=urlsList).values_list('address', flat=True)
 
+        print(addresses)
+
         for urlData in urlsData:
 
             if urlData['loc'] in addresses:
-                urlsList.remove(urlData['loc'])
+                if urlData['loc'] in urlsList:
+                    urlsList.remove(urlData['loc'])
 
-                if urlData['lastmod'] is not None:
-                    # print(type(existingPages))
-                    for page in existingPages:
+                # print(type(existingPages))
+                for page in existingPages:
 
-                        if page[0] == urlData['loc']:
-                            # if last mod is longer than X min ago
-                            # Or later than page updated at
-                            # [1] => updated_at
+                    if page[0] == urlData['loc'] and urlData['lastmod'] is not None:
+                        # if last mod is longer than X min ago
+                        # Or later than page updated at
+                        # [1] => updated_at
 
-                            sitemapDiff = page[1] - urlData['lastmod']
-                            rendertronDiff = page[1] - doCacheAgain
-                            if (sitemapDiff.total_seconds() <= 0) or (rendertronDiff.total_seconds() <= 0):
-                                print("do queue again")
+                        sitemapDiff = page[1] - urlData['lastmod']
+                        rendertronDiff = page[1] - doCacheAgain
+                        if (sitemapDiff.total_seconds() <= 0) or (rendertronDiff.total_seconds() <= 0):
+                            print("do queue again")
 
-                                queue_item_found = QueueItem.objects.filter(page=page).filter(
-                                    status="unscheduled").first()
-                                if queue_item_found is None:
-                                    queue_item: QueueItem = QueueItem(page=page, website=website, priority=10000)
-                                    createQueueObjects.append(queue_item)
-                else:
-                    print("No last mod <----")
-                    print(urlData['loc'])
+                            queue_item_found = QueueItem.objects.filter(page=page).filter(status="unscheduled").first()
+                            if queue_item_found is None:
+                                queue_item: QueueItem = QueueItem(page=page, website=website, priority=10000)
+                                createQueueObjects.append(queue_item)
+
 
         createPageObjects = []
 
@@ -144,15 +98,7 @@ class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
         print(len(urlsList))
         print(count)
         for url in urlsList:
-            # print(" ---- start --- ")
             print("create: " + str(url))
-            # print(url in addresses)
-            # print(" ---- END --- ")
-
-            # TODO do i want a check and is this good enough
-            mobileUrl = url + "?mobile=true"
-            mobilePage: Page = Page(address=mobileUrl, website=website)
-            createPageObjects.append(mobilePage)
 
             page: Page = Page(address=url, website=website)
             createPageObjects.append(page)
@@ -169,16 +115,18 @@ class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
     @decorators.action(detail=True, methods=['get'])
     def sync(self, request, version, website_id=None):
         print("start call")
-
         website = Website.objects.filter(id=website_id).first()
-        urlsData = self._getSitemapUrls(website)
+
+        sitemap = Sitemap(website)
+        urlsData = sitemap.get_data()
+
         doCacheAgain = datetime.now(timezone.utc) - timedelta(minutes=10000)
 
         print("-- overview --")
         print("total url count: " + str(len(urlsData)))
         print("-- start sync --")
 
-        size = 500
+        size = 1000
         for i in range(0, len(urlsData), size):
             data = urlsData[i:i + size]
             self._multiThreadedPageSync(website_id, website, data, doCacheAgain)
@@ -324,5 +272,4 @@ class RedoPageCache(viewsets.ViewSet):
 
             return HttpResponse(data)
 
-        # TODO exception or other resturl
         return Response([''])
