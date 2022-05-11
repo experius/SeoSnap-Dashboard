@@ -35,7 +35,7 @@ class WebsiteReport(viewsets.ViewSet):
         pages = Page.objects \
             .filter(website_id=website_id) \
             .filter(cache_status='cached') \
-            .order_by('updated_at')[:50]
+            .order_by('-updated_at')[:50]
         pageSerializer = PageSerializer(pages, many=True)
 
         return JsonResponse({
