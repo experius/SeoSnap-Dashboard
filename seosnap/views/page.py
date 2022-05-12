@@ -232,8 +232,7 @@ class RedoPageCache(viewsets.ViewSet):
         print(tags)
         print(tags.split(' '))
 
-        queryset = list(filter(lambda page: any(
-            ' ' + word + ' ' in ' ' + page.x_magento_tags.decode('UTF-8') + ' ' for word in tags.split(' ')),
+        queryset = list(filter(lambda page: page.x_magento_tags is not None and any(' ' + word + ' ' in ' ' + page.x_magento_tags.decode('UTF-8') + ' ' for word in tags.split(' ')),
                                website.pages.all()))
         # if any(word in 'some one long two phrase three' for word in list_):
 
