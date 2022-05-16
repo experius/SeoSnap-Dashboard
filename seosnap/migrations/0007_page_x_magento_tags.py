@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='page',
             name='x_magento_tags',
-            field=models.BinaryField(null=True, editable=True),
+            field=models.TextField(),
         ),
     ]

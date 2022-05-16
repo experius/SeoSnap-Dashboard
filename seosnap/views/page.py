@@ -6,6 +6,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.schemas import AutoSchema
 from datetime import datetime, timedelta, timezone
+from django.db.models import Q
 
 from seosnap.models import Page, Website, QueueItem
 from seosnap.models.sitemap import Sitemap
@@ -58,11 +59,10 @@ class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
         for urlData in urlsData:
             urlsList.add(urlData['loc'])
 
-        existingPages = list(Page.objects.filter(website_id=website_id).filter(address__in=urlsList).values_list('address', 'updated_at'))
+        existingPages = list(
+            Page.objects.filter(website_id=website_id).filter(address__in=urlsList).values_list('address',
+                                                                                                'updated_at'))
         addresses = Page.objects.values_list('address', flat=True)
-
-        # TODO check if this works
-        # addresses = Page.objects..filter(address__in=urlsList).values_list('address', flat=True)
 
         print(addresses)
 
@@ -89,7 +89,6 @@ class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
                             if queue_item_found is None:
                                 queue_item: QueueItem = QueueItem(page=page, website=website, priority=10000)
                                 createQueueObjects.append(queue_item)
-
 
         createPageObjects = []
 
@@ -232,23 +231,35 @@ class RedoPageCache(viewsets.ViewSet):
         print(tags)
         print(tags.split(' '))
 
-        queryset = list(filter(lambda page: page.x_magento_tags is not None and any(' ' + word + ' ' in ' ' + page.x_magento_tags.decode('UTF-8') + ' ' for word in tags.split(' ')),
-                               website.pages.all()))
-        # if any(word in 'some one long two phrase three' for word in list_):
+        query = Q()
+        for tag in tags.split(' '):
+            query |= Q(x_magento_tags__contains=tag)
+
+        queryset = website.pages.all().filter(query)
+
+        print(len(queryset))
+
+        # urlList = []
+        createQueueObjects = []
+        # for p in queryset:
+        #     urlList.append(p.address)
+        #
+        # print(len(urlList))
+        itemsFound = QueueItem.objects.filter(page__in=queryset).filter(status="unscheduled").values_list('page_id', flat=True)
+        print(itemsFound)
+
+        for p in queryset:
+            if p.id not in itemsFound:
+                queue_item: QueueItem = QueueItem(page=p, website=website, priority=request.data['priority'])
+                createQueueObjects.append(queue_item)
+
+        QueueItem.objects.bulk_create(createQueueObjects)
 
         # Length of queryset
-        print(len(queryset))
 
         # All pages
         print('xx')
         print(request)
-        for page in queryset:
-
-            pageFound = QueueItem.objects.filter(page=page).filter(status="unscheduled").first()
-
-            if pageFound is None:
-                queue_item: QueueItem = QueueItem(page=page, website=website, priority=request.data['priority'])
-                queue_item.save()
 
         return HttpResponse(status=200)
 

@@ -12,7 +12,7 @@ class Page(Model):
     content_type = models.CharField(max_length=255, null=True, default=None)
     status_code = models.IntegerField(null=True, default=None)
     extract_fields = JSONField(default=dict)
-    x_magento_tags = models.BinaryField(null=True, editable=True)
+    x_magento_tags = models.TextField()
 
     cache_status = models.CharField(max_length=64, choices=[
         ('cached', 'Cached'),
@@ -34,9 +34,7 @@ class Page(Model):
             super(Page, self).__setattr__(attrname, val)
 
     def setter_x_magento_tags(self, value):
-        if type(value) is bytes or value is None:
-            return value
-        return value.encode()
+        return " " + value + " "
 
     def setter_id(self, value):
         return value
