@@ -125,7 +125,7 @@ class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
         print("total url count: " + str(len(urlsData)))
         print("-- start sync --")
 
-        size = 1000
+        size = 500
         for i in range(0, len(urlsData), size):
             data = urlsData[i:i + size]
             self._multiThreadedPageSync(website_id, website, data, doCacheAgain)
@@ -136,10 +136,14 @@ class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
         deletablePages = Page.objects.filter(website_id=website_id).exclude(address__in=urlList) \
             .exclude(id__in=QueueItem.objects.filter(status="unscheduled").values('page_id'))
 
+        urlsList = set()
+        for urlData in urlsData:
+            urlsList.add(urlData['loc'])
+
         for page in deletablePages:
             head, sep, tail = page.address.partition('?')
 
-            if head not in urlList:
+            if head.strip() not in urlsList:
                 print("delete: " + str(head))
                 QueueItem.objects.filter(page=page).delete()
                 page.delete()
