@@ -5,6 +5,7 @@ from rest_framework import viewsets, decorators
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.schemas import AutoSchema
+from django.http.response import HttpResponse
 
 from seosnap.models import Website, QueueItem
 from seosnap.serializers import QueueItemSerializer, QueueSerializer
@@ -30,7 +31,7 @@ class QueueWebsiteList(viewsets.ViewSet, PageNumberPagination):
         return Response(serializer.data)
 
     @decorators.action(detail=True, methods=['get'])
-    def queueProgress(self, request, version, website_id=None):
+    def queue_progress(self, request, version, website_id=None):
         website = Website.objects.filter(id=website_id).first()
 
         if request.GET.get('filter'):
@@ -50,7 +51,7 @@ class QueueWebsiteList(viewsets.ViewSet, PageNumberPagination):
         return Response(serializer.data)
 
     @decorators.action(detail=True, methods=['get'])
-    def todoCount(self, request, version, website_id=None):
+    def todo_count(self, request, version, website_id=None):
         queItemCount = QueueItem.objects\
             .filter(website_id=website_id)\
             .filter(status__in=['scheduled', 'unscheduled'])\
@@ -73,6 +74,31 @@ class QueueWebsiteUpdate(viewsets.ViewSet):
             )
         ),
     ])
+
+    @decorators.action(detail=True, methods=['put'])
+    def update_priority(self, request, version, website_id=None, queue_item_id=None):
+        print("im hereee")
+        item = QueueItem.objects \
+            .filter(website_id=website_id) \
+            .filter(id=queue_item_id) \
+            .first()
+
+        if item is None:
+            return HttpResponse(status=404)
+
+        item.priority = 1
+        item.save()
+
+        return HttpResponse(status=200)
+
+    @decorators.action(detail=True, methods=['post'])
+    def items_update_priority(self, request, version, website_id=None):
+        QueueItem.objects \
+            .filter(website_id=website_id) \
+            .filter(id__in=request.data.values()) \
+            .update(priority=10)
+
+        return HttpResponse(status=200)
 
     @decorators.action(detail=True, methods=['put'])
     def update_queue(self, request, version, website_id=None):
@@ -112,3 +138,19 @@ class QueueWebsiteClean(viewsets.ViewSet):
         website.queue_items.filter(status='completed').delete()
 
         return Response([])
+
+    @decorators.action(detail=True, methods=['delete'])
+    def delete_queue_item(self, request, version, website_id=None, queue_item_id=None):
+        QueueItem.objects \
+            .filter(website_id=website_id) \
+            .filter(id=queue_item_id) \
+            .delete()
+
+        return HttpResponse(status=200)
+
+    @decorators.action(detail=True, methods=['post'])
+    def delete_multiple_queue_items(self, request, version, website_id=None):
+        QueueItem.objects.filter(website_id=website_id).filter(id__in=request.data.values()).delete()
+
+        return HttpResponse(status=200)
+

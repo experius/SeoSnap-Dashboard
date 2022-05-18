@@ -36,10 +36,11 @@ services:
       MYSQL_DATABASE: ${DB_NAME}
       MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PASS}
+      MYSQL_TCP_PORT: 3307
     volumes:
       - seosnap_dashboard_db:/var/lib/mysql
     ports:
-      - "3307:3306"
+      - "3307:3307"
     networks:
       - seosnap_dashboard
 
