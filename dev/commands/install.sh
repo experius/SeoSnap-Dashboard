@@ -1,7 +1,7 @@
 #!/bin/sh
 if [ -f ".env" ]; then
   echo 'Generating new secret key'
-  export NEW_SECRET="$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c50)";
+  export NEW_SECRET="$(head /dev/urandom | base64  | tr -dc 'a-zA-Z0-9' | head -c50)";
   sed -i "s/https\:\/\/miniwebtool.com\/django-secret-key-generator\//${NEW_SECRET}/g" .env;
   
   echo 'Setting new admin user login'

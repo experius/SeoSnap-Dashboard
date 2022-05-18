@@ -20,7 +20,7 @@ services:
       ADMIN_DEBUG:
       ADMIN_LOG_LEVEL:
     ports:
-      - "8000:80"
+      - "80:80"
     depends_on:
       - db
     networks:
@@ -36,11 +36,10 @@ services:
       MYSQL_DATABASE: ${DB_NAME}
       MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PASS}
-      MYSQL_TCP_PORT: 3307
     volumes:
       - seosnap_dashboard_db:/var/lib/mysql
     ports:
-      - "3307:3307"
+      - "3306:3306"
     networks:
       - seosnap_dashboard
 
