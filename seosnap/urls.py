@@ -17,6 +17,7 @@ website_pages_clean = views.PageWebsiteClean.as_view({'delete': 'clean_pages'})
 website_queue = views.QueueWebsiteList.as_view({'get': 'queue'})
 website_queue_progression = views.QueueWebsiteList.as_view({'get': 'queue_progress'})
 website_queue_todo_count = views.QueueWebsiteList.as_view({'get': 'todo_count'})
+website_queue_redo_old = views.QueueWebsiteList.as_view({'post': 'redo_old'})
 website_queue_update = views.QueueWebsiteUpdate.as_view({'put': 'update_queue'})
 website_queue_priority_update = views.QueueWebsiteUpdate.as_view({'put': 'update_priority'})
 website_queue_items_priority_update = views.QueueWebsiteUpdate.as_view({'post': 'items_update_priority'})
@@ -46,6 +47,7 @@ urlpatterns = [
 
     path('websites/<int:website_id>/queue/progression', website_queue_progression, name='websites-queue-list-progression'),
     path('websites/<int:website_id>/queue/todo/count', website_queue_todo_count, name='websites-queue-todo-count'),
+    path('websites/<int:website_id>/queue/redo/old', website_queue_redo_old, name='websites-queue-redo-old'),
     path('websites/<int:website_id>/queue/<int:queue_item_id>/priority', website_queue_priority_update, name='websites-queue-priority-update'),
     path('websites/<int:website_id>/queue/items/priority', website_queue_items_priority_update, name='websites-queue-items-priority-update'),
 

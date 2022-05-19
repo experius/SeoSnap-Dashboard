@@ -1,5 +1,6 @@
 import coreapi, coreschema
 from django.db import transaction
+from datetime import datetime, timedelta, timezone
 
 from rest_framework import viewsets, decorators
 from rest_framework.pagination import PageNumberPagination
@@ -12,6 +13,20 @@ from seosnap.serializers import QueueItemSerializer, QueueSerializer
 
 
 class QueueWebsiteList(viewsets.ViewSet, PageNumberPagination):
+
+    @decorators.action(detail=True, methods=['post'])
+    def redo_old(self, request, version, website_id=None):
+        doCacheAgain = datetime.now(timezone.utc) - timedelta(minutes=120)
+
+        QueueItem.objects \
+            .filter(status='scheduled') \
+            .filter(website_id=website_id) \
+            .filter(updated_at__lte=doCacheAgain.date())\
+            .update(status='unscheduled')
+
+        # TODO run this command + run completed queue clean command
+        return HttpResponse(status=200)
+
     @decorators.action(detail=True, methods=['get'])
     def queue(self, request, version, website_id=None):
         website = Website.objects.filter(id=website_id).first()

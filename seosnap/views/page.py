@@ -92,7 +92,7 @@ class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
 
         createPageObjects = []
 
-        print("HOII <------")
+        print("Create count <------")
         print(len(urlsData))
         print(len(urlsList))
         print(count)
@@ -148,7 +148,7 @@ class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
                 QueueItem.objects.filter(page=page).delete()
                 page.delete()
 
-        print("-- fully delete --")
+        print("-- fully deleted --")
 
         return HttpResponse(status=200)
 
