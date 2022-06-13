@@ -13,9 +13,12 @@ class PageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Page
         fields = (
-            'website', 'address', 'content_type', 'status_code', 'cache_status', 'cached_at', 'created_at',
+            'id',
+            'website', 'address',
+            'content_type', 'status_code', 'cache_status', 'cached_at', 'created_at',
             'updated_at',
-            'extract_fields')
+            'extract_fields',
+            'x_magento_tags' )
         read_only_fields = ('website', 'created_at', 'updated_at')
 
 
@@ -46,7 +49,16 @@ class QueueItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = QueueItem
         fields = ('page', 'status')
-        read_only_fields = ('page', 'priority')
+        read_only_fields = ('id', 'page', 'priority')
+
+
+class QueueSerializer(serializers.ModelSerializer):
+    page = LightPageSerializer(read_only=True)
+
+    class Meta:
+        model = QueueItem
+        fields = ('id', 'page_id', 'page', 'status', 'priority', 'created_at')
+        read_only_fields = ('id', 'priority', 'created_at')
 
 
 class WebsiteReportingSerializer(serializers.Serializer):

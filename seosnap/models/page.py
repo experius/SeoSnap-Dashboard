@@ -12,6 +12,7 @@ class Page(Model):
     content_type = models.CharField(max_length=255, null=True, default=None)
     status_code = models.IntegerField(null=True, default=None)
     extract_fields = JSONField(default=dict)
+    x_magento_tags = models.TextField()
 
     cache_status = models.CharField(max_length=64, choices=[
         ('cached', 'Cached'),
@@ -21,6 +22,22 @@ class Page(Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def __setattr__(self, attrname, val):
+        setter_func = 'setter_' + attrname
+
+        if attrname in self.__dict__ and callable(getattr(self, setter_func, None)):
+            super(Page, self).__setattr__(attrname, getattr(self, setter_func)(val))
+        elif attrname == "x_magento_tags":
+            super(Page, self).__setattr__(attrname, getattr(self, setter_func)(val))
+        else:
+            super(Page, self).__setattr__(attrname, val)
+
+    def setter_x_magento_tags(self, value):
+        return " " + value + " "
+
+    def setter_id(self, value):
+        return value
 
     def __str__(self):
         return f'{self.address}'
