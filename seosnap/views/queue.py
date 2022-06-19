@@ -34,7 +34,7 @@ class QueueWebsiteList(viewsets.ViewSet, PageNumberPagination):
         if not allowed or not website: return Response([])
 
         data = website.queue_items.filter(status='unscheduled') \
-                   .order_by('-priority', '-created_at') \
+                   .order_by('priority', '-created_at') \
                    .all()[:50]
 
         with transaction.atomic():
@@ -169,3 +169,27 @@ class QueueWebsiteClean(viewsets.ViewSet):
 
         return HttpResponse(status=200)
 
+
+class Queues(viewsets.ViewSet, PageNumberPagination):
+
+    @decorators.action(detail=True, methods=['get'])
+    def get_queues(self, request, version):
+        website_ids = []
+        if request.query_params.getlist('website_ids'):
+            website_ids = request.query_params.getlist('website_ids')
+
+        if request.GET.get('filter'):
+            queryset = QueueItem.objects.filter(website_id__in=website_ids).filter(status__in=['scheduled', 'unscheduled']).filter(page__address__icontains=request.GET.get('filter')).all()
+        else:
+            queryset = QueueItem.objects.filter(website_id__in=website_ids).filter(status__in=['scheduled', 'unscheduled']).all()
+
+        if request.GET.get('limit'):
+            self.page_size = request.GET.get('limit')
+
+        page = self.paginate_queryset(queryset, request)
+        if page is not None:
+            serializer = QueueSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = QueueSerializer(queryset, many=True)
+        return Response(serializer.data)
