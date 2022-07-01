@@ -338,10 +338,23 @@ class Pages(viewsets.ViewSet, PageNumberPagination):
     @decorators.action(detail=True, methods=['post'])
     def cache_redo_tag(self, request, version):
         website_ids = []
+        tags = request.data['tags']
         if request.query_params.getlist('website_ids'):
             website_ids = request.query_params.getlist('website_ids')
-        print("start")
 
-        # TODO
+        query = Q()
+        for tag in tags.split(' '):
+            query |= Q(tags__name=tag)
+
+        pages = Page.objects.filter(website_id__in=website_ids).filter(query)
+        createQueueObjects = []
+        itemsFound = QueueItem.objects.filter(page__in=pages).filter(status="unscheduled").values_list('page_id',
+                                                                                                       flat=True)
+        for p in pages:
+            if p.id not in itemsFound:
+                queue_item: QueueItem = QueueItem(page=p, website=p.website_id, priority=request.data['priority'])
+                createQueueObjects.append(queue_item)
+
+        QueueItem.objects.bulk_create(createQueueObjects)
 
         return HttpResponse(status=200)
