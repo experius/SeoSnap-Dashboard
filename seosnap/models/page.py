@@ -2,11 +2,11 @@ from django.db import models
 from django_mysql.models import Model
 
 from seosnap.utils.JSONField import JSONField
-from seosnap.models import Website
-
+from seosnap.models import Website, Tag
 
 class Page(Model):
     website = models.ForeignKey(Website, related_name='pages', on_delete=models.CASCADE)
+    tags = models.ManyToManyField(Tag)
 
     address = models.CharField(max_length=255)
     content_type = models.CharField(max_length=255, null=True, default=None)
