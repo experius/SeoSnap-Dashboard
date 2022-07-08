@@ -24,16 +24,20 @@ class WebsiteViewSet(viewsets.ModelViewSet):
 
 class WebsiteReport(viewsets.ViewSet):
     @decorators.action(detail=True, methods=['get'])
-    def get_logging(self, request, version, website_id=None):
+    def get_logging(self, request, version):
+        website_ids = []
+        if request.query_params.getlist('website_ids'):
+            website_ids = request.query_params.getlist('website_ids')
+
         one_hour_ago = timezone.now() - timedelta(hours=1)
         lastHourUpdated = Page.objects \
-            .filter(website_id=website_id) \
+            .filter(website_id__in=website_ids) \
             .filter(cache_status='cached') \
             .filter(updated_at__gte=one_hour_ago) \
             .count()
 
         pages = Page.objects \
-            .filter(website_id=website_id) \
+            .filter(website_id__in=website_ids) \
             .filter(cache_status='cached') \
             .order_by('-updated_at')[:50]
         pageSerializer = PageSerializer(pages, many=True)

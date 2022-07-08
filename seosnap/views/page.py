@@ -59,12 +59,8 @@ class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
         for urlData in urlsData:
             urlsList.add(urlData['loc'])
 
-        existingPages = list(
-            Page.objects.filter(website_id=website_id).filter(address__in=urlsList).values_list('address',
-                                                                                                'updated_at'))
+        existingPages = Page.objects.filter(website_id=website_id).filter(address__in=urlsList)
         addresses = Page.objects.values_list('address', flat=True)
-
-        print(addresses)
 
         for urlData in urlsData:
 
@@ -75,15 +71,14 @@ class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
                 # print(type(existingPages))
                 for page in existingPages:
 
-                    if page[0] == urlData['loc'] and urlData['lastmod'] is not None:
+                    if page.address == urlData['loc'] and urlData['lastmod'] is not None:
                         # if last mod is longer than X min ago
                         # Or later than page updated at
                         # [1] => updated_at
 
-                        sitemapDiff = page[1] - urlData['lastmod']
-                        rendertronDiff = page[1] - doCacheAgain
+                        sitemapDiff = page.updated_at - urlData['lastmod']
+                        rendertronDiff = page.updated_at - doCacheAgain
                         if (sitemapDiff.total_seconds() <= 0) or (rendertronDiff.total_seconds() <= 0):
-                            print("do queue again")
 
                             queue_item_found = QueueItem.objects.filter(page=page).filter(status="unscheduled").first()
                             if queue_item_found is None:
@@ -272,18 +267,15 @@ class RedoPageCache(viewsets.ViewSet):
         return HttpResponse(status=200)
 
     @decorators.action(detail=True, methods=['post'])
-    def cache_redo_website(self, request, version, website_id=None):
-        print(" --- start request ---")
-
-        website: Website = Website.objects.filter(id=website_id).first()
+    def cache_redo_website(self, request, version):
         if request.data['pageId']:
             prio = 10000
             if request.data['priority']:
                 prio = 1
 
-            page: Page = website.pages.filter(id=request.data['pageId'])
+            page: Page = Page.objects.filter(id=request.data['pageId'])
 
-            queue_item: QueueItem = QueueItem(page=page[0], website=website, priority=prio)
+            queue_item: QueueItem = QueueItem(page=page[0], website=page[0].website, priority=prio)
             queue_item.save()
 
             data = serialize("json", [queue_item], fields=('page', 'website', 'status', 'priority', 'created_at'))
@@ -293,22 +285,15 @@ class RedoPageCache(viewsets.ViewSet):
         return Response([''])
 
     @decorators.action(detail=True, methods=['post'])
-    def cache_redo_addresses(self, request, version, website_id=None):
-        createQueueObjects = []
-        website: Website = Website.objects.filter(id=website_id).first()
+    def multiple_cache_redo_website(self, request, version):
+        pages = Page.objects.filter(id__in=request.data.values())
 
-        if request.data:
-            recachePages = Page.objects.filter(website_id=website_id).filter(address__in=request.data.values())
+        for page in pages:
+            queue_item: QueueItem = QueueItem(page=page, website=page.website, priority=100)
+            queue_item.save()
 
-            for page in recachePages:
-                queue_item: QueueItem = QueueItem(page=page, website=website, priority=10000)
-                createQueueObjects.append(queue_item)
+        return HttpResponse(status=200)
 
-            QueueItem.objects.bulk_create(createQueueObjects)
-
-            return HttpResponse(status=200)
-
-        return HttpResponse(status=404)
 
 
 class Pages(viewsets.ViewSet, PageNumberPagination):
