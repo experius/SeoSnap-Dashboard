@@ -24,7 +24,6 @@ class QueueWebsiteList(viewsets.ViewSet, PageNumberPagination):
             .filter(updated_at__lte=doCacheAgain.date())\
             .update(status='unscheduled')
 
-        # TODO run this command + run completed queue clean command
         return HttpResponse(status=200)
 
     @decorators.action(detail=True, methods=['get'])
@@ -35,7 +34,7 @@ class QueueWebsiteList(viewsets.ViewSet, PageNumberPagination):
 
         data = website.queue_items.filter(status='unscheduled') \
                    .order_by('priority', '-created_at') \
-                   .all()[:50]
+                   .all()[:25]
 
         with transaction.atomic():
             for item in data:
@@ -91,10 +90,9 @@ class QueueWebsiteUpdate(viewsets.ViewSet):
     ])
 
     @decorators.action(detail=True, methods=['put'])
-    def update_priority(self, request, version, website_id=None, queue_item_id=None):
+    def update_priority(self, request, version, queue_item_id=None):
         print("im hereee")
         item = QueueItem.objects \
-            .filter(website_id=website_id) \
             .filter(id=queue_item_id) \
             .first()
 
@@ -107,9 +105,8 @@ class QueueWebsiteUpdate(viewsets.ViewSet):
         return HttpResponse(status=200)
 
     @decorators.action(detail=True, methods=['post'])
-    def items_update_priority(self, request, version, website_id=None):
+    def items_update_priority(self, request, version):
         QueueItem.objects \
-            .filter(website_id=website_id) \
             .filter(id__in=request.data.values()) \
             .update(priority=10)
 
@@ -155,17 +152,16 @@ class QueueWebsiteClean(viewsets.ViewSet):
         return Response([])
 
     @decorators.action(detail=True, methods=['delete'])
-    def delete_queue_item(self, request, version, website_id=None, queue_item_id=None):
+    def delete_queue_item(self, request, version, queue_item_id=None):
         QueueItem.objects \
-            .filter(website_id=website_id) \
             .filter(id=queue_item_id) \
             .delete()
 
         return HttpResponse(status=200)
 
     @decorators.action(detail=True, methods=['post'])
-    def delete_multiple_queue_items(self, request, version, website_id=None):
-        QueueItem.objects.filter(website_id=website_id).filter(id__in=request.data.values()).delete()
+    def delete_multiple_queue_items(self, request, version):
+        QueueItem.objects.filter(id__in=request.data.values()).delete()
 
         return HttpResponse(status=200)
 
