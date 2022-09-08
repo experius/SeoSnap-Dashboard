@@ -10,7 +10,7 @@ class Sitemap:
 
     def get_data(self):
         r = requests.get(self.website.sitemap)
-        rootDict = xmltodict.parse(r.text)
+        rootDict = xmltodict.parse(r.text, force_list={'url'})
 
         urls = []
         mobile_urls = []
@@ -40,7 +40,7 @@ class Sitemap:
 
     def _get_sitemap_data(self, sitemapUrl):
         r = requests.get(sitemapUrl)
-        rootDict = xmltodict.parse(r.text)
+        rootDict = xmltodict.parse(r.text, force_list={'url'})
         data = rootDict['urlset']['url']
         mobile_data = []
 
