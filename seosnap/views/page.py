@@ -8,7 +8,7 @@ from rest_framework.schemas import AutoSchema
 from datetime import datetime, timedelta, timezone
 from django.db.models import Q
 
-from seosnap.models import Page, Website, QueueItem
+from seosnap.models import Page, Website, QueueItem, Tag
 from seosnap.models.sitemap import Sitemap
 from seosnap.serializers import PageSerializer
 from django.core import serializers
@@ -59,12 +59,8 @@ class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
         for urlData in urlsData:
             urlsList.add(urlData['loc'])
 
-        existingPages = list(
-            Page.objects.filter(website_id=website_id).filter(address__in=urlsList).values_list('address',
-                                                                                                'updated_at'))
+        existingPages = Page.objects.filter(website_id=website_id).filter(address__in=urlsList)
         addresses = Page.objects.values_list('address', flat=True)
-
-        print(addresses)
 
         for urlData in urlsData:
 
@@ -75,15 +71,14 @@ class PageWebsiteList(viewsets.ViewSet, PageNumberPagination):
                 # print(type(existingPages))
                 for page in existingPages:
 
-                    if page[0] == urlData['loc'] and urlData['lastmod'] is not None:
+                    if page.address == urlData['loc'] and urlData['lastmod'] is not None:
                         # if last mod is longer than X min ago
                         # Or later than page updated at
                         # [1] => updated_at
 
-                        sitemapDiff = page[1] - urlData['lastmod']
-                        rendertronDiff = page[1] - doCacheAgain
+                        sitemapDiff = page.updated_at - urlData['lastmod']
+                        rendertronDiff = page.updated_at - doCacheAgain
                         if (sitemapDiff.total_seconds() <= 0) or (rendertronDiff.total_seconds() <= 0):
-                            print("do queue again")
 
                             queue_item_found = QueueItem.objects.filter(page=page).filter(status="unscheduled").first()
                             if queue_item_found is None:
@@ -179,6 +174,8 @@ class PageWebsiteUpdate(viewsets.ViewSet):
 
         existing = {page.address: page for page in Page.objects.filter(address__in=addresses, website_id=website_id)}
         allowed_fields = set(PageSerializer.Meta.fields) - set(PageSerializer.Meta.read_only_fields)
+
+        tagsString = ""
         for item in items:
             item = {k: item[k] for k in allowed_fields if k in item}
             if item['address'] in existing:
@@ -186,11 +183,27 @@ class PageWebsiteUpdate(viewsets.ViewSet):
                 for k, v in item.items(): setattr(page, k, v)
             else:
                 existing[item['address']] = Page(**item)
+            tagsString = tagsString + " " + item['x_magento_tags'].strip()
+
+        tagsArrayFull = set(tagsString.strip().split(" "))
+
+        createTagObjects = []
+        existingTags = Tag.objects.filter(name__in=tagsArrayFull).values_list('name', flat=True)
+        for tagString in tagsArrayFull:
+            if tagString not in existingTags:
+                tag = Tag(name=tagString)
+                createTagObjects.append(tag)
+        Tag.objects.bulk_create(createTagObjects)
 
         with transaction.atomic():
             cache_updated_at = website.cache_updated_at
             for page in existing.values():
                 page.website_id = website_id
+
+                tagsArray = page.x_magento_tags.strip().split(' ')
+                existingTagObjects = Tag.objects.filter(name__in=tagsArray)
+                page.tags.set(existingTagObjects)
+
                 cache_updated_at = page.cached_at
                 page.save()
             website.cache_updated_at = cache_updated_at
@@ -237,49 +250,32 @@ class RedoPageCache(viewsets.ViewSet):
 
         query = Q()
         for tag in tags.split(' '):
-            query |= Q(x_magento_tags__contains=tag)
+            query |= Q(tags__name=tag)
 
-        queryset = website.pages.all().filter(query)
+        pages = website.pages.filter(query)
 
-        print(len(queryset))
-
-        # urlList = []
         createQueueObjects = []
-        # for p in queryset:
-        #     urlList.append(p.address)
-        #
-        # print(len(urlList))
-        itemsFound = QueueItem.objects.filter(page__in=queryset).filter(status="unscheduled").values_list('page_id', flat=True)
-        print(itemsFound)
 
-        for p in queryset:
+        itemsFound = QueueItem.objects.filter(page__in=pages).filter(status="unscheduled").values_list('page_id', flat=True)
+        for p in pages:
             if p.id not in itemsFound:
                 queue_item: QueueItem = QueueItem(page=p, website=website, priority=request.data['priority'])
                 createQueueObjects.append(queue_item)
 
         QueueItem.objects.bulk_create(createQueueObjects)
 
-        # Length of queryset
-
-        # All pages
-        print('xx')
-        print(request)
-
         return HttpResponse(status=200)
 
     @decorators.action(detail=True, methods=['post'])
-    def cache_redo_website(self, request, version, website_id=None):
-        print(" --- start request ---")
-
-        website: Website = Website.objects.filter(id=website_id).first()
+    def cache_redo_website(self, request, version):
         if request.data['pageId']:
             prio = 10000
             if request.data['priority']:
                 prio = 1
 
-            page: Page = website.pages.filter(id=request.data['pageId'])
+            page: Page = Page.objects.filter(id=request.data['pageId'])
 
-            queue_item: QueueItem = QueueItem(page=page[0], website=website, priority=prio)
+            queue_item: QueueItem = QueueItem(page=page[0], website=page[0].website, priority=prio)
             queue_item.save()
 
             data = serialize("json", [queue_item], fields=('page', 'website', 'status', 'priority', 'created_at'))
@@ -289,19 +285,61 @@ class RedoPageCache(viewsets.ViewSet):
         return Response([''])
 
     @decorators.action(detail=True, methods=['post'])
-    def cache_redo_addresses(self, request, version, website_id=None):
+    def multiple_cache_redo_website(self, request, version):
+        pages = Page.objects.filter(id__in=request.data.values())
+
+        for page in pages:
+            queue_item: QueueItem = QueueItem(page=page, website=page.website, priority=100)
+            queue_item.save()
+
+        return HttpResponse(status=200)
+
+
+
+class Pages(viewsets.ViewSet, PageNumberPagination):
+
+    @decorators.action(detail=True, methods=['get'])
+    def get_pages(self, request, version):
+        website_ids = []
+        if request.query_params.getlist('website_ids'):
+            website_ids = request.query_params.getlist('website_ids')
+
+        if request.GET.get('filter'):
+            queryset = list(filter(lambda page: page.address.startswith(request.GET.get('filter')), Page.objects.filter(website_id__in=website_ids).all()))
+        else:
+            queryset = Page.objects.filter(website_id__in=website_ids).all()
+
+        if request.GET.get('limit'):
+            self.page_size = request.GET.get('limit')
+
+        page = self.paginate_queryset(queryset, request)
+        if page is not None:
+            serializer = PageSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = PageSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @decorators.action(detail=True, methods=['post'])
+    def cache_redo_tag(self, request, version):
+        website_ids = []
+        tags = request.data['tags']
+        if request.query_params.getlist('website_ids'):
+            website_ids = request.query_params.getlist('website_ids')
+
+        query = Q()
+        for tag in tags.split(' '):
+            query |= Q(tags__name=tag)
+
+        pages = Page.objects.filter(website_id__in=website_ids).filter(query)
         createQueueObjects = []
-        website: Website = Website.objects.filter(id=website_id).first()
-
-        if request.data:
-            recachePages = Page.objects.filter(website_id=website_id).filter(address__in=request.data.values())
-
-            for page in recachePages:
-                queue_item: QueueItem = QueueItem(page=page, website=website, priority=10000)
+        itemsFound = QueueItem.objects.filter(page__in=pages).filter(status="unscheduled").values_list('page_id',
+                                                                                                       flat=True)
+        for p in pages:
+            if p.id not in itemsFound:
+                queue_item: QueueItem = QueueItem(page=p, website=p.website_id, priority=request.data['priority'])
                 createQueueObjects.append(queue_item)
 
-            QueueItem.objects.bulk_create(createQueueObjects)
+        QueueItem.objects.bulk_create(createQueueObjects)
 
-            return HttpResponse(status=200)
-
-        return HttpResponse(status=404)
+        return HttpResponse(status=200)

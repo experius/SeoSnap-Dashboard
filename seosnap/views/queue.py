@@ -24,7 +24,6 @@ class QueueWebsiteList(viewsets.ViewSet, PageNumberPagination):
             .filter(updated_at__lte=doCacheAgain.date())\
             .update(status='unscheduled')
 
-        # TODO run this command + run completed queue clean command
         return HttpResponse(status=200)
 
     @decorators.action(detail=True, methods=['get'])
@@ -34,8 +33,8 @@ class QueueWebsiteList(viewsets.ViewSet, PageNumberPagination):
         if not allowed or not website: return Response([])
 
         data = website.queue_items.filter(status='unscheduled') \
-                   .order_by('-priority', '-created_at') \
-                   .all()[:50]
+                   .order_by('priority', '-created_at') \
+                   .all()[:25]
 
         with transaction.atomic():
             for item in data:
@@ -91,10 +90,9 @@ class QueueWebsiteUpdate(viewsets.ViewSet):
     ])
 
     @decorators.action(detail=True, methods=['put'])
-    def update_priority(self, request, version, website_id=None, queue_item_id=None):
+    def update_priority(self, request, version, queue_item_id=None):
         print("im hereee")
         item = QueueItem.objects \
-            .filter(website_id=website_id) \
             .filter(id=queue_item_id) \
             .first()
 
@@ -107,9 +105,8 @@ class QueueWebsiteUpdate(viewsets.ViewSet):
         return HttpResponse(status=200)
 
     @decorators.action(detail=True, methods=['post'])
-    def items_update_priority(self, request, version, website_id=None):
+    def items_update_priority(self, request, version):
         QueueItem.objects \
-            .filter(website_id=website_id) \
             .filter(id__in=request.data.values()) \
             .update(priority=10)
 
@@ -155,17 +152,40 @@ class QueueWebsiteClean(viewsets.ViewSet):
         return Response([])
 
     @decorators.action(detail=True, methods=['delete'])
-    def delete_queue_item(self, request, version, website_id=None, queue_item_id=None):
+    def delete_queue_item(self, request, version, queue_item_id=None):
         QueueItem.objects \
-            .filter(website_id=website_id) \
             .filter(id=queue_item_id) \
             .delete()
 
         return HttpResponse(status=200)
 
     @decorators.action(detail=True, methods=['post'])
-    def delete_multiple_queue_items(self, request, version, website_id=None):
-        QueueItem.objects.filter(website_id=website_id).filter(id__in=request.data.values()).delete()
+    def delete_multiple_queue_items(self, request, version):
+        QueueItem.objects.filter(id__in=request.data.values()).delete()
 
         return HttpResponse(status=200)
 
+
+class Queues(viewsets.ViewSet, PageNumberPagination):
+
+    @decorators.action(detail=True, methods=['get'])
+    def get_queues(self, request, version):
+        website_ids = []
+        if request.query_params.getlist('website_ids'):
+            website_ids = request.query_params.getlist('website_ids')
+
+        if request.GET.get('filter'):
+            queryset = QueueItem.objects.filter(website_id__in=website_ids).filter(status__in=['scheduled', 'unscheduled']).filter(page__address__icontains=request.GET.get('filter')).all()
+        else:
+            queryset = QueueItem.objects.filter(website_id__in=website_ids).filter(status__in=['scheduled', 'unscheduled']).all()
+
+        if request.GET.get('limit'):
+            self.page_size = request.GET.get('limit')
+
+        page = self.paginate_queryset(queryset, request)
+        if page is not None:
+            serializer = QueueSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = QueueSerializer(queryset, many=True)
+        return Response(serializer.data)
