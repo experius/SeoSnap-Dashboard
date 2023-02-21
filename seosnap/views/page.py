@@ -188,10 +188,17 @@ class PageWebsiteUpdate(viewsets.ViewSet):
         tagsArrayFull = set(tagsString.strip().split(" "))
 
         createTagObjects = []
-        existingTags = Tag.objects.filter(name__in=tagsArrayFull).values_list('name', flat=True)
+        singleTagArray = []
+        #Split all x_magento_tags blocks into their individual tags
         for tagString in tagsArrayFull:
-            if tagString not in existingTags:
-                tag = Tag(name=tagString)
+            tagStringArray = tagString.strip().split(",")
+            singleTagArray.extend(tagStringArray)
+        #remove duplicates by changing list to set
+        singleTagArray = set(singleTagArray)
+        existingTags = Tag.objects.filter(name__in=singleTagArray).values_list('name', flat=True)
+        for singleTag in singleTagArray:
+             if singleTag not in existingTags:
+                tag = Tag(name=singleTag)
                 createTagObjects.append(tag)
         Tag.objects.bulk_create(createTagObjects)
 
@@ -201,7 +208,16 @@ class PageWebsiteUpdate(viewsets.ViewSet):
                 page.website_id = website_id
 
                 tagsArray = page.x_magento_tags.strip().split(' ')
-                existingTagObjects = Tag.objects.filter(name__in=tagsArray)
+                pageArray = [];
+                #Split all x_magento_tags blocks into their individual tags
+                for tags in tagsArray:
+                    tagStringArray = tags.strip().split(",")
+                    pageArray.extend(tagStringArray)
+                pageArray = set(pageArray);
+                existingTagObjects = Tag.objects.filter(name__in=pageArray)
+                #Create new page object if it doesn't exist, assiging tags requires object to exist
+                if not page.id:
+                    page.save()
                 page.tags.set(existingTagObjects)
 
                 cache_updated_at = page.cached_at
